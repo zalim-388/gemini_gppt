@@ -11,11 +11,13 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
+  bool _isPasswordVisible = false;
   // final FirebaseAuth _auth = FirebaseAuth.instance;
   // final AuthService _authService = AuthService();
   bool _isLoading = false;
@@ -74,8 +76,24 @@ class _LoginScreenState extends State<LoginScreen> {
   //   }
   // }
 
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+  }
+
   @override
   void dispose() {
+    _glowController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -90,7 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          image: DecorationImage(image: AssetImage('assets/screen.png')),
+          image: DecorationImage(
+            image: AssetImage('assets/screen.png'),
+            fit: BoxFit.cover,
+          ),
 
           // gradient: LinearGradient(
           //   begin: Alignment.topCenter,
@@ -103,130 +124,147 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 400.w, minHeight: 0.8.sh),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 22.w),
+              child: SingleChildScrollView(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Login Form Card
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(32.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20.r,
-                            offset: Offset(0, 8.h),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Title
-                          Text(
-                            'Gemini GPT',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 32.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-
-                          SizedBox(height: 32.h),
-
-                          // Email Field
-                          _buildInputField(
-                            controller: _emailController,
-                            focusNode: _emailFocusNode,
-                            hintText: 'Email',
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-
-                          SizedBox(height: 16.h),
-
-                          // Password Field
-                          _buildInputField(
-                            controller: _passwordController,
-                            focusNode: _passwordFocusNode,
-                            hintText: 'Password',
-                            isPassword: true,
-                          ),
-
-                          SizedBox(height: 16.h),
-
-                          // Forgot Password Link
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                // Handle forgot password
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                'Forgot Password?',
-                                style: TextStyle(
-                                  color: const Color(0xFF757575),
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: 24.h),
-
-                          // Login Button
-                          _buildGlowingButton(),
-
-                          SizedBox(height: 24.h),
-
-                          // OR Divider
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 1.h,
-                                  color: Colors.grey[300],
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                                child: Text(
-                                  'OR',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14.sp,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  height: 1.h,
-                                  color: Colors.grey[300],
-                                ),
+                    AnimatedBuilder(
+                      animation: _glowAnimation,
+                      builder: (context, child) {
+                        return Container(
+                          padding: EdgeInsets.all(15.w),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 4.w),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    Color.lerp(
+                                      Colors.grey.shade400.withOpacity(0.2),
+                                      Colors.grey.shade400.withOpacity(0.6),
+                                      _glowAnimation.value,
+                                    )!,
+                                blurRadius: 20.r,
+                                spreadRadius: 2,
                               ),
                             ],
                           ),
+                          child: Image.asset(
+                            "assets/logo-removebg-preview.png",
+                            fit: BoxFit.contain,
+                            height: 45.h,
+                            width: 40.w,
+                          ),
+                          // child: Icon(
+                          //   Icons.memory,
+                          //   size: 32.sp,
+                          //   color: Colors.black,
+                          // ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 32.h),
 
-                          SizedBox(height: 24.h),
-
-                          // Google Login Button
-                          _buildGoogleLoginButton(),
-                        ],
+                    // Title
+                    Text(
+                      'Gemini GPT',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: -0.5,
                       ),
                     ),
+
+                    SizedBox(height: 32.h),
+
+                    // Email Field
+                    _buildInputField(
+                      controller: _emailController,
+                      focusNode: _emailFocusNode,
+                      hintText: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      icon: Icons.email_outlined,
+                    ),
+
+                    SizedBox(height: 16.h),
+
+                    // Password Field
+                    _buildInputField(
+                      controller: _passwordController,
+                      focusNode: _passwordFocusNode,
+                      hintText: 'Password',
+                      isPassword: true,
+                      icon: Icons.lock_outline,
+                    ),
+
+                    SizedBox(height: 16.h),
+
+                    // Forgot Password Link
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // Handle forgot password
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: const Color(0xFF757575),
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Login Button
+                    _buildGlowingButton(),
+
+                    SizedBox(height: 24.h),
+
+                    // OR Divider
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 1.h,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 1.h,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Google Login Button
+                    _buildGoogleLoginButton(),
                   ],
                 ),
               ),
@@ -243,26 +281,45 @@ class _LoginScreenState extends State<LoginScreen> {
     required String hintText,
     TextInputType keyboardType = TextInputType.text,
     bool isPassword = false,
+    required IconData icon,
   }) {
     return Container(
-      height: 56.h,
+      height: 55.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: Colors.white),
       ),
       child: TextField(
+        cursorColor: Colors.black,
         controller: controller,
         focusNode: focusNode,
         keyboardType: keyboardType,
-        obscureText: isPassword,
+        obscureText: isPassword && !_isPasswordVisible,
         style: TextStyle(fontSize: 16.sp, color: Colors.black),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16.sp),
+          hintStyle: TextStyle(color: Colors.black, fontSize: 16.sp),
+          prefixIcon: Icon(icon, color: Colors.black, size: 20.sp),
           contentPadding: EdgeInsets.symmetric(
             horizontal: 16.w,
             vertical: 16.h,
           ),
+          suffixIcon:
+              isPassword
+                  ? IconButton(
+                    onPressed:
+                        () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: Colors.black,
+                      size: 22.sp,
+                    ),
+                  )
+                  : null,
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -273,17 +330,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGlowingButton() {
     return Container(
-      height: 56.h,
+      height: 50.h,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.r),
-        gradient: const LinearGradient(
-          colors: [Colors.black, Color(0xFF757575)],
-        ),
+        borderRadius: BorderRadius.circular(16.r),
+        gradient: const LinearGradient(colors: [Colors.black, Colors.grey]),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
+            offset: Offset(4.w, 4.h),
             blurRadius: 8.r,
-            offset: Offset(0, 4.h),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            offset: Offset(-2.w, -2.h),
+            blurRadius: 4.r,
           ),
         ],
       ),
@@ -317,16 +377,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGoogleLoginButton() {
     return Container(
-      height: 56.h,
+      height: 50.h,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset: Offset(4.w, 4.h),
+            blurRadius: 8.r,
+          ),
+          BoxShadow(
+            color: Colors.grey.shade400,
+            offset: Offset(-4.w, -4.h),
+            blurRadius: 8.r,
           ),
         ],
       ),
@@ -358,7 +423,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Text(
               'Continue with Google',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
               ),

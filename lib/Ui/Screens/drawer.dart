@@ -1,7 +1,10 @@
+// Updated CustomDrawer with dark mode support
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 class CustomDrawer extends StatefulWidget {
   const CustomDrawer({super.key});
@@ -14,21 +17,18 @@ class _CustomDrawerState extends State<CustomDrawer>
     with TickerProviderStateMixin {
   late AnimationController _drawerAnimationController;
   late Animation<double> _drawerAnimation;
-
   String _selectedChatId = '1';
 
   final List<ChatConversation> _conversations = [
     ChatConversation(
       id: '1',
       title: 'Flutter Development Tips',
-
       timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
       isActive: true,
     ),
     ChatConversation(
       id: '2',
       title: 'API Integration Guide',
-
       timestamp: DateTime.now().subtract(const Duration(hours: 2)),
       isActive: true,
     ),
@@ -41,51 +41,12 @@ class _CustomDrawerState extends State<CustomDrawer>
     ChatConversation(
       id: '4',
       title: 'UI/UX Design Principles',
-
       timestamp: DateTime.now().subtract(const Duration(days: 2)),
       isActive: false,
     ),
     ChatConversation(
       id: '5',
       title: 'Database Integration',
-
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '6',
-
-      title: 'SQLite vs Hive performance',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '7',
-
-      title: 'SQLite vs Hive performance,',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '8',
-
-      title: 'Material Design guidelines',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '9',
-
-      title: 'Provider vs BLoC comparison',
-
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '10',
-
-      title: 'Provider vs BLoC comparison',
-
       timestamp: DateTime.now().subtract(const Duration(days: 3)),
       isActive: false,
     ),
@@ -113,12 +74,10 @@ class _CustomDrawerState extends State<CustomDrawer>
   void _selectChat(String chatId) {
     setState(() {
       _selectedChatId = chatId;
-
       for (var chat in _conversations) {
         chat.isActive = chat.id == chatId;
       }
     });
-
     Navigator.of(context).pop();
   }
 
@@ -147,8 +106,10 @@ class _CustomDrawerState extends State<CustomDrawer>
     });
   }
 
-  // Show rename dialog - ChatGPT style
   void _showRenameDialog(ChatConversation chat) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     TextEditingController controller = TextEditingController(text: chat.title);
 
     showDialog(
@@ -160,7 +121,7 @@ class _CustomDrawerState extends State<CustomDrawer>
               borderRadius: BorderRadius.circular(12.r),
             ),
             elevation: 8,
-            backgroundColor: Colors.white,
+            backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
             child: Container(
               width: 400.w,
               padding: EdgeInsets.all(24.w),
@@ -168,22 +129,22 @@ class _CustomDrawerState extends State<CustomDrawer>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Text(
                     'Rename conversation',
                     style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: isDarkMode ? Colors.white : Colors.black87,
                     ),
                   ),
                   SizedBox(height: 16.h),
-
-                  // Input field
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: Colors.grey.withOpacity(0.3),
+                        color:
+                            isDarkMode
+                                ? Colors.grey.shade700
+                                : Colors.grey.withOpacity(0.3),
                         width: 1,
                       ),
                       borderRadius: BorderRadius.circular(8.r),
@@ -194,7 +155,7 @@ class _CustomDrawerState extends State<CustomDrawer>
                       maxLines: null,
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
-                        color: Colors.black87,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
@@ -205,7 +166,10 @@ class _CustomDrawerState extends State<CustomDrawer>
                         hintText: 'Enter conversation name',
                         hintStyle: GoogleFonts.poppins(
                           fontSize: 14.sp,
-                          color: Colors.grey.withOpacity(0.6),
+                          color:
+                              isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.withOpacity(0.6),
                         ),
                       ),
                       onSubmitted: (value) {
@@ -217,35 +181,24 @@ class _CustomDrawerState extends State<CustomDrawer>
                     ),
                   ),
                   SizedBox(height: 20.h),
-
-                  // Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Cancel button
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 8.h,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                        ),
                         child: Text(
                           'Cancel',
                           style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey.withOpacity(0.8),
+                            color:
+                                isDarkMode
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.withOpacity(0.8),
                           ),
                         ),
                       ),
                       SizedBox(width: 8.w),
-
-                      // Save button
                       ElevatedButton(
                         onPressed: () {
                           if (controller.text.trim().isNotEmpty) {
@@ -254,15 +207,11 @@ class _CustomDrawerState extends State<CustomDrawer>
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black87,
+                          backgroundColor:
+                              isDarkMode
+                                  ? Colors.blue.shade700
+                                  : Colors.black87,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 8.h,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
                           elevation: 0,
                         ),
                         child: Text(
@@ -284,27 +233,31 @@ class _CustomDrawerState extends State<CustomDrawer>
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return Container(
       width: 250.w,
       height: double.infinity,
-      decoration: BoxDecoration(color: Colors.white),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+      ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 30.h),
-            _buildDrawerHeader(),
+            _buildDrawerHeader(isDarkMode),
             SizedBox(height: 10.h),
-            _buildSearchBar(),
+            _buildSearchBar(isDarkMode),
             SizedBox(height: 10.h),
-            _buildNewChatButton(),
-
+            _buildNewChatButton(isDarkMode),
             SizedBox(height: 5.h),
-            text(),
-            Expanded(child: _buildConversationsList()),
+            _buildChatsText(isDarkMode),
+            Expanded(child: _buildConversationsList(isDarkMode)),
             SizedBox(height: 10.h),
-            _buildDrawerFooter(),
+            _buildDrawerFooter(isDarkMode),
             SizedBox(height: 10.h),
           ],
         ),
@@ -312,7 +265,7 @@ class _CustomDrawerState extends State<CustomDrawer>
     );
   }
 
-  Widget _buildDrawerHeader() {
+  Widget _buildDrawerHeader(bool isDarkMode) {
     return Padding(
       padding: EdgeInsets.only(left: 50.w),
       child: Row(
@@ -320,7 +273,7 @@ class _CustomDrawerState extends State<CustomDrawer>
           Text(
             'Gemini GPT',
             style: GoogleFonts.poppins(
-              color: Colors.black,
+              color: isDarkMode ? Colors.white : Colors.black,
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
@@ -331,58 +284,34 @@ class _CustomDrawerState extends State<CustomDrawer>
     );
   }
 
-  Widget text() {
+  Widget _buildChatsText(bool isDarkMode) {
     return Text(
       "Chats",
-      style: GoogleFonts.poppins(color: Colors.black, fontSize: 14.sp),
-    );
-  }
-
-  Widget _buildNewChatButton() {
-    return InkWell(
-      onTap: _createNewChat,
-      child: TextField(
-        style: GoogleFonts.poppins(color: Colors.black, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: 'New chat',
-          hintStyle: GoogleFonts.poppins(
-            color: Colors.grey.withOpacity(0.8),
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-          ),
-          prefixIcon: Icon(
-            Icons.add,
-            color: Colors.grey.withOpacity(0.6),
-            size: 18.sp,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(25.r),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(25.r),
-            borderSide: BorderSide.none,
-          ),
-          // contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
-          fillColor: Colors.grey.withOpacity(0.05),
-          filled: true,
-        ),
+      style: GoogleFonts.poppins(
+        color: isDarkMode ? Colors.white : Colors.black,
+        fontSize: 14.sp,
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildNewChatButton(bool isDarkMode) {
     return TextField(
-      style: GoogleFonts.poppins(color: Colors.black, fontSize: 14.sp),
+      style: GoogleFonts.poppins(
+        color: isDarkMode ? Colors.white : Colors.black,
+        fontSize: 14.sp,
+      ),
       decoration: InputDecoration(
-        hintText: 'Search conversations...',
+        hintText: 'New chat',
         hintStyle: GoogleFonts.poppins(
-          color: Colors.grey.withOpacity(0.8),
+          color:
+              isDarkMode ? Colors.grey.shade400 : Colors.grey.withOpacity(0.8),
           fontSize: 14.sp,
+          fontWeight: FontWeight.w500,
         ),
         prefixIcon: Icon(
-          Icons.search,
-          color: Colors.grey.withOpacity(0.6),
+          Icons.add,
+          color:
+              isDarkMode ? Colors.grey.shade400 : Colors.grey.withOpacity(0.6),
           size: 18.sp,
         ),
         focusedBorder: OutlineInputBorder(
@@ -393,126 +322,183 @@ class _CustomDrawerState extends State<CustomDrawer>
           borderRadius: BorderRadius.circular(25.r),
           borderSide: BorderSide.none,
         ),
-        // contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
-        fillColor: Colors.grey.withOpacity(0.05),
+        fillColor:
+            isDarkMode
+                ? Colors.grey.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.05),
+        filled: true,
+      ),
+      onTap: _createNewChat,
+    );
+  }
+
+  Widget _buildSearchBar(bool isDarkMode) {
+    return TextField(
+      style: GoogleFonts.poppins(
+        color: isDarkMode ? Colors.white : Colors.black,
+        fontSize: 14.sp,
+      ),
+      decoration: InputDecoration(
+        hintText: 'Search conversations...',
+        hintStyle: GoogleFonts.poppins(
+          color:
+              isDarkMode ? Colors.grey.shade400 : Colors.grey.withOpacity(0.8),
+          fontSize: 14.sp,
+        ),
+        prefixIcon: Icon(
+          Icons.search,
+          color:
+              isDarkMode ? Colors.grey.shade400 : Colors.grey.withOpacity(0.6),
+          size: 18.sp,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25.r),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25.r),
+          borderSide: BorderSide.none,
+        ),
+        fillColor:
+            isDarkMode
+                ? Colors.grey.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.05),
         filled: true,
       ),
     );
   }
 
-  Widget _buildConversationsList() {
+  Widget _buildConversationsList(bool isDarkMode) {
     return ListView.builder(
       itemCount: _conversations.length,
       padding: EdgeInsets.zero,
       itemBuilder: (context, index) {
         final chat = _conversations[index];
-        return _buildConversationItem(chat);
+        return _buildConversationItem(chat, isDarkMode);
       },
     );
   }
 
-  Widget _buildConversationItem(ChatConversation chat) {
-    return Container(
-      child: InkWell(
-        onTap: () => _selectChat(chat.id),
-        onLongPress: () => _buildPopup(chat),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 10.h),
-          child: Row(
-            children: [
-              Text(
+  Widget _buildConversationItem(ChatConversation chat, bool isDarkMode) {
+    return InkWell(
+      onTap: () => _selectChat(chat.id),
+      onLongPress: () => _showPopupMenu(chat, isDarkMode),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
                 chat.title,
                 style: GoogleFonts.poppins(
-                  color: Colors.black,
+                  color: isDarkMode ? Colors.white : Colors.black,
                   fontSize: 14.sp,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPopup(ChatConversation chat) {
-    return PopupMenuButton<String>(
+  void _showPopupMenu(ChatConversation chat, bool isDarkMode) {
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(100, 100, 0, 0),
+      items: [
+        PopupMenuItem(
+          value: 'rename',
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit,
+                size: 16.sp,
+                color:
+                    isDarkMode ? Colors.white70 : Colors.black.withOpacity(0.8),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Rename',
+                style: GoogleFonts.poppins(
+                  color:
+                      isDarkMode
+                          ? Colors.white70
+                          : Colors.black.withOpacity(0.8),
+                  fontSize: 14.sp,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete,
+                size: 16.sp,
+                color: isDarkMode ? Colors.red.shade300 : Colors.red,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Delete',
+                style: GoogleFonts.poppins(
+                  color: isDarkMode ? Colors.red.shade300 : Colors.red,
+                  fontSize: 14.sp,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      color: isDarkMode ? Colors.grey.shade900 : Colors.white,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-      icon: Icon(
-        Icons.more_vert,
-        color: Colors.grey.withOpacity(0.6),
-        size: 16.sp,
-      ),
-      onSelected: (value) {
-        if (value == 'delete') {
-          _deleteChat(chat.id);
-        } else if (value == 'rename') {
-          _showRenameDialog(chat);
-        }
-      },
-      itemBuilder:
-          (context) => [
-            _buildPopupMenuItem(
-              title: "Rename",
-              icon: Icons.edit,
-              value: "rename",
-            ),
-            _buildPopupMenuItem(
-              title: "Delete",
-              icon: Icons.delete,
-              value: "delete",
-            ),
-          ],
-    );
+    ).then((value) {
+      if (value == 'delete') {
+        _deleteChat(chat.id);
+      } else if (value == 'rename') {
+        _showRenameDialog(chat);
+      }
+    });
   }
 
-  PopupMenuEntry<String> _buildPopupMenuItem({
-    required String title,
-    required IconData icon,
-    required String value,
-  }) {
-    return PopupMenuItem<String>(
-      value: value,
-      child: Row(
-        children: [
-          Icon(icon, size: 16.sp, color: Colors.black.withOpacity(0.8)),
-          SizedBox(width: 8.w),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              color: Colors.black.withOpacity(0.8),
-              fontSize: 14.sp,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerFooter() {
+  Widget _buildDrawerFooter(bool isDarkMode) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => buildSettingsPage(context)),
+          MaterialPageRoute(builder: (_) => SettingsPage()),
         );
       },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.person_outlined, color: Colors.black, size: 20.sp),
+          Icon(
+            Icons.person_outlined,
+            color: isDarkMode ? Colors.white : Colors.black,
+            size: 20.sp,
+          ),
           SizedBox(width: 8.w),
           Text(
             'User Account',
             style: GoogleFonts.poppins(
-              color: Colors.black.withOpacity(0.9),
+              color:
+                  isDarkMode
+                      ? Colors.white.withOpacity(0.9)
+                      : Colors.black.withOpacity(0.9),
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(width: 4.w),
-          Icon(Icons.keyboard_arrow_down, color: Colors.black, size: 14.sp),
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: isDarkMode ? Colors.white : Colors.black,
+            size: 14.sp,
+          ),
         ],
       ),
     );
@@ -522,113 +508,300 @@ class _CustomDrawerState extends State<CustomDrawer>
 class ChatConversation {
   final String id;
   String title;
-
   final DateTime timestamp;
   bool isActive;
 
   ChatConversation({
     required this.id,
     required this.title,
-
     required this.timestamp,
     required this.isActive,
   });
 }
 
-Widget buildSettingsPage(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(
-        'Settings',
-        style: GoogleFonts.poppins(
-          color: Colors.black,
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w600,
+// Updated Settings Page with Dark Mode Selection
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Settings',
+          style: GoogleFonts.poppins(
+            color: theme.appBarTheme.foregroundColor,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: theme.appBarTheme.foregroundColor,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.of(context).pop(),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: Column(
+          children: [
+            SizedBox(height: 16.h),
+            _buildSettingItem(
+              icon: Icons.person_outlined,
+              title: "User Account",
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 8.h),
+            _buildSettingItem(
+              icon: Icons.email_outlined,
+              title: 'Email',
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 8.h),
+            _buildSettingItem(
+              icon: Icons.bolt,
+              title: "Upgrade to Pro",
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 8.h),
+            // Theme Selection Setting
+            _buildThemeSettingItem(context, themeProvider, isDarkMode),
+            SizedBox(height: 8.h),
+            _buildSettingItem(
+              icon: Icons.lock_outline,
+              title: 'Privacy Policy',
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 8.h),
+            _buildSettingItem(
+              icon: Icons.info_outline,
+              title: 'About',
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+            SizedBox(height: 8.h),
+            _buildSettingItem(
+              icon: Icons.logout,
+              title: 'Log Out',
+              onTap: () {},
+              isDarkMode: isDarkMode,
+            ),
+          ],
+        ),
       ),
-    ),
-    backgroundColor: Colors.white,
-    body: Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
+    );
+  }
+
+  Widget _buildThemeSettingItem(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    bool isDarkMode,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            isDarkMode
+                ? Colors.grey.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.wb_sunny_outlined,
+          color: isDarkMode ? Colors.white : Colors.black,
+          size: 20.sp,
+        ),
+        title: Text(
+          'Color Scheme',
+          style: GoogleFonts.poppins(
+            color: isDarkMode ? Colors.white : Colors.black,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
+        trailing: Icon(
+          Icons.chevron_right,
+          color:
+              isDarkMode ? Colors.grey.shade300 : Colors.grey.withOpacity(0.6),
+          size: 18.sp,
+        ),
+        onTap:
+            () => _showThemeSelectionDialog(context, themeProvider, isDarkMode),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+      ),
+    );
+  }
+
+  void _showThemeSelectionDialog(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    bool isDarkMode,
+  ) {
+    ThemeMode tempMode = themeProvider.themeMode; // store current mode
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              title: Text(
+                'Color Scheme',
+                style: GoogleFonts.poppins(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildThemeOption(
+                    context,
+                    title: 'System (Default)',
+                    themeMode: ThemeMode.system,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+
+                  _buildThemeOption(
+                    context,
+                    title: 'Light',
+                    themeMode: ThemeMode.light,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+                  _buildThemeOption(
+                    context,
+                    title: 'Dark',
+                    themeMode: ThemeMode.dark,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    themeProvider.setThemeMode(tempMode);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'OK',
+                    style: GoogleFonts.poppins(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String title,
+
+    required ThemeMode themeMode,
+    required ThemeMode currentThemeMode,
+    required Function(ThemeMode?) onChanged,
+    required bool isDarkMode,
+  }) {
+    return RadioListTile<ThemeMode>(
+      title: Row(
         children: [
-          SizedBox(height: 16.h),
-          _buildSettingItem(
-            icon: Icons.person_outlined,
-            title: "User Account",
-            onTap: () {},
+          SizedBox(width: 12.w),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              color: isDarkMode ? Colors.white : Colors.black,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(
-            icon: Icons.email_outlined,
-            title: 'Email',
-            onTap: () {},
-          ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(
-            icon: Icons.bolt,
-            title: "Upgrade to Pro",
-            onTap: () {},
-          ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(
-            icon: Icons.wb_sunny_outlined,
-            title: 'Color Scheme',
-            onTap: () {},
-          ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(
-            icon: Icons.lock_outline,
-            title: 'Privacy Policy',
-            onTap: () {},
-          ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(
-            icon: Icons.info_outline,
-            title: 'About',
-            onTap: () {},
-          ),
-          SizedBox(height: 8.h),
-          _buildSettingItem(icon: Icons.logout, title: 'Log Out', onTap: () {}),
         ],
       ),
-    ),
-  );
-}
+      value: themeMode,
+      groupValue: currentThemeMode,
+      onChanged: onChanged,
+      activeColor: isDarkMode ? Colors.white : Colors.black,
+    );
+  }
 
-Widget _buildSettingItem({
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.grey.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(8.r),
-    ),
-    child: ListTile(
-      leading: Icon(icon, color: Colors.black, size: 20.sp),
-      title: Text(
-        title,
-        style: GoogleFonts.poppins(
-          color: Colors.black,
-          fontSize: 16.sp,
-          fontWeight: FontWeight.w500,
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            isDarkMode
+                ? Colors.grey.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isDarkMode ? Colors.white : Colors.black,
+          size: 20.sp,
         ),
+        title: Text(
+          title,
+          style: GoogleFonts.poppins(
+            color: isDarkMode ? Colors.white : Colors.black,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color:
+              isDarkMode ? Colors.grey.shade300 : Colors.grey.withOpacity(0.6),
+          size: 18.sp,
+        ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
       ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: Colors.grey.withOpacity(0.6),
-        size: 18.sp,
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-    ),
-  );
+    );
+  }
 }

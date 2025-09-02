@@ -1,3 +1,4 @@
+// Updated HomePage with dark mode support
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -5,12 +6,12 @@ import 'package:gemini_gpt/Ui/Screens/drawer.dart';
 import 'package:gemini_gpt/bloc/GeminiGptBloc.dart';
 import 'package:gemini_gpt/bloc/GeminiGptEvent.dart';
 import 'package:gemini_gpt/bloc/GeminiGptState.dart';
+import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({
-    super.key,
-  });
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -36,9 +37,9 @@ class _HomePageState extends State<HomePage> {
       _messages.add({'type': 'user', 'message': inputMessage});
     });
 
-    BlocProvider.of<GeminiGptBloc>(context)
-        .add(FetchGeminiGpt(prompt: inputMessage));
-
+    BlocProvider.of<GeminiGptBloc>(
+      context,
+    ).add(FetchGeminiGpt(prompt: inputMessage));
     _controller.clear();
     _scrollToBottom();
   }
@@ -57,33 +58,40 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           "Gemini GPT",
           style: GoogleFonts.poppins(
-              color: Colors.black,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600),
+            color: theme.appBarTheme.foregroundColor,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor,
         leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu,
-              color: Colors.black,
-              size: 24.sp,
-            ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+          builder:
+              (context) => IconButton(
+                icon: Icon(
+                  Icons.menu,
+                  color: theme.appBarTheme.foregroundColor,
+                  size: 24.sp,
+                ),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
         ),
         actions: [
           IconButton(
             icon: Icon(
-              Icons.bolt_rounded,
-              color: Colors.black,
+              Icons.bolt,
+
+              color: theme.appBarTheme.foregroundColor,
               size: 24.sp,
             ),
             onPressed: () {},
@@ -106,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                   setState(() {
                     _messages.add({
                       'type': 'error',
-                      'message': 'Error: ${state.message}'
+                      'message': 'Error: ${state.message}',
                     });
                   });
                   _scrollToBottom();
@@ -116,54 +124,62 @@ class _HomePageState extends State<HomePage> {
                 builder: (context, state) {
                   return _messages.isEmpty
                       ? Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.w),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  " what can I help with ?",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 18.sp,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "What can I help with?",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18.sp,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[300]
+                                          : Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  "Chat with Gemini GPT",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16.sp,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w400,
-                                  ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                "Chat with Gemini GPT",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16.sp,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                  fontWeight: FontWeight.w400,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        )
+                        ),
+                      )
                       : ListView.builder(
-                          controller: _scrollController,
-                          padding: EdgeInsets.all(16.w),
-                          itemCount: _messages.length +
-                              (state is GeminiGptBlocLoading ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _messages.length &&
-                                state is GeminiGptBlocLoading) {
-                              return _buildLoadingMessage();
-                            }
+                        controller: _scrollController,
+                        padding: EdgeInsets.all(16.w),
+                        itemCount:
+                            _messages.length +
+                            (state is GeminiGptBlocLoading ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _messages.length &&
+                              state is GeminiGptBlocLoading) {
+                            return _buildLoadingMessage(isDarkMode);
+                          }
 
-                            final message = _messages[index];
-                            final isUser = message['type'] == 'user';
-                            final isError = message['type'] == 'error';
+                          final message = _messages[index];
+                          final isUser = message['type'] == 'user';
+                          final isError = message['type'] == 'error';
 
-                            return _buildMessageBubble(
-                              message['message']!,
-                              isUser,
-                              isError,
-                            );
-                          },
-                        );
+                          return _buildMessageBubble(
+                            message['message']!,
+                            isUser,
+                            isError,
+                            isDarkMode,
+                          );
+                        },
+                      );
                 },
               ),
             ),
@@ -171,7 +187,7 @@ class _HomePageState extends State<HomePage> {
           SingleChildScrollView(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: _buildInputField(),
+              child: _buildInputField(isDarkMode),
             ),
           ),
           SizedBox(height: 30.h),
@@ -180,60 +196,67 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMessageBubble(String message, bool isUser, bool isError) {
+  Widget _buildMessageBubble(
+    String message,
+    bool isUser,
+    bool isError,
+    bool isDarkMode,
+  ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser) ...[
-            SizedBox(width: 4.w),
-          ],
+          if (!isUser) SizedBox(width: 4.w),
           Flexible(
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               decoration: BoxDecoration(
-                  color: isUser
-                      ? Colors.blue.shade600
-                      : isError
-                          ? Colors.red.shade100
-                          : Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(10.r)),
+                color:
+                    isUser
+                        ? (isDarkMode
+                            ? Colors.blue.shade700
+                            : Colors.blue.shade100)
+                        : (isDarkMode
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade100),
+                borderRadius: BorderRadius.circular(20.r),
+              ),
               child: Text(
                 message,
                 style: TextStyle(
-                  color: isUser
-                      ? Colors.white
-                      : isError
-                          ? Colors.red.shade800
-                          : Colors.black87,
-                  fontSize: 16,
+                  color:
+                      isUser
+                          ? (isDarkMode ? Colors.white : Colors.black87)
+                          : isError
+                          ? (isDarkMode
+                              ? Colors.red.shade300
+                              : Colors.red.shade800)
+                          : (isDarkMode ? Colors.white : Colors.black87),
+                  fontSize: 16.sp,
                 ),
               ),
             ),
           ),
-          if (isUser) ...[
-            SizedBox(width: 4.w),
-          ],
+          if (isUser) SizedBox(width: 4.w),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingMessage() {
+  Widget _buildLoadingMessage(bool isDarkMode) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20),
+              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -243,14 +266,16 @@ class _HomePageState extends State<HomePage> {
                   height: 20.h,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isDarkMode ? Colors.white : Colors.black,
+                    ),
                   ),
                 ),
                 SizedBox(width: 12.w),
                 Text(
                   "Thinking...",
                   style: GoogleFonts.poppins(
-                    color: Colors.black54,
+                    color: isDarkMode ? Colors.white70 : Colors.black54,
                     fontSize: 16.sp,
                   ),
                 ),
@@ -262,7 +287,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildInputField() {
+  Widget _buildInputField(bool isDarkMode) {
     return SafeArea(
       child: BlocBuilder<GeminiGptBloc, GeminiGptState>(
         builder: (context, state) {
@@ -272,8 +297,16 @@ class _HomePageState extends State<HomePage> {
             maxLines: null,
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => isLoading ? null : _sendMessage(),
+            style: GoogleFonts.poppins(
+              color: isDarkMode ? Colors.white : Colors.black,
+              fontSize: 16.sp,
+            ),
             decoration: InputDecoration(
               hintText: "Ask anything...",
+              hintStyle: GoogleFonts.poppins(
+                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                fontSize: 16.sp,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(25.r),
                 borderSide: BorderSide.none,
@@ -287,36 +320,44 @@ class _HomePageState extends State<HomePage> {
                 borderSide: BorderSide.none,
               ),
               filled: true,
-              fillColor: Colors.grey.shade50,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 22.w, vertical: 12),
+              fillColor:
+                  isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 22.w,
+                vertical: 12.h,
+              ),
               suffixIcon: Padding(
                 padding: EdgeInsets.all(4.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isLoading
-                        ? Colors.grey.shade400
-                        : (_controller.text.trim().isEmpty
-                            ? Colors.black
-                            : Colors.grey.shade400),
+                    color:
+                        isLoading
+                            ? (isDarkMode ? Colors.blue.shade700 : Colors.black)
+                            : (_controller.text.trim().isEmpty
+                                ? Colors.grey.shade400
+                                : (isDarkMode
+                                    ? Colors.blue.shade700
+                                    : Colors.grey.shade700)),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: isLoading
-                        ? SizedBox(
-                            width: 20.w,
-                            height: 20.h,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                    icon:
+                        isLoading
+                            ? SizedBox(
+                              width: 20.w,
+                              height: 20.h,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : Icon(
+                              Icons.arrow_upward,
+                              color: Colors.white,
+                              size: 20.sp,
                             ),
-                          )
-                        : Icon(
-                            Icons.arrow_upward,
-                            color: Colors.white,
-                            size: 20.sp,
-                          ),
                     onPressed: isLoading ? null : _sendMessage,
                   ),
                 ),
