@@ -6,22 +6,11 @@ class ChatMessage {
   final String id;
   final String type; // 'user', 'bot', 'error'
   final String message;
-  final DateTime timestamp;
 
-  ChatMessage({
-    required this.id,
-    required this.type,
-    required this.message,
-    required this.timestamp,
-  });
+  ChatMessage({required this.id, required this.type, required this.message});
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'type': type,
-      'message': message,
-      'timestamp': timestamp.millisecondsSinceEpoch,
-    };
+    return {'id': id, 'type': type, 'message': message};
   }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -29,7 +18,6 @@ class ChatMessage {
       id: json['id'],
       type: json['type'],
       message: json['message'],
-      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp']),
     );
   }
 }
@@ -37,14 +25,14 @@ class ChatMessage {
 class ChatConversation {
   final String id;
   String title;
-  final DateTime timestamp;
+
   bool isActive;
   List<ChatMessage> messages;
 
   ChatConversation({
     required this.id,
     required this.title,
-    required this.timestamp,
+
     required this.isActive,
     this.messages = const [],
   });
@@ -53,7 +41,7 @@ class ChatConversation {
     return {
       'id': id,
       'title': title,
-      'timestamp': timestamp.millisecondsSinceEpoch,
+
       'isActive': isActive,
       'messages': messages.map((msg) => msg.toJson()).toList(),
     };
@@ -63,7 +51,7 @@ class ChatConversation {
     return ChatConversation(
       id: json['id'],
       title: json['title'],
-      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp']),
+
       isActive: json['isActive'] ?? false,
       messages:
           (json['messages'] as List<dynamic>?)
@@ -153,7 +141,7 @@ class ChatHistoryService {
     return ChatConversation(
       id: 'chat_${now.millisecondsSinceEpoch}',
       title: title ?? 'New Chat',
-      timestamp: now,
+
       isActive: true,
       messages: [],
     );
@@ -241,7 +229,7 @@ class ChatHistoryService {
       ChatConversation(
         id: 'default_1',
         title: 'Welcome Chat',
-        timestamp: DateTime.now(),
+
         isActive: true,
         messages: [],
       ),

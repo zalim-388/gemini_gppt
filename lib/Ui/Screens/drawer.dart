@@ -2,12 +2,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:gemini_gpt/Ui/Service/history_service.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class CustomDrawer extends StatefulWidget {
-  const CustomDrawer({super.key});
+  final List<ChatConversation> conversation;
+  final String? activeConversationId;
+  final Function(String) onConversationSelected;
+  final Function(String) onConversationDeleted;
+  final Function(String, String) onConversationRenamed;
+  final VoidCallback onNewConversation;
+
+  const CustomDrawer({
+    super.key,
+    required this.conversation,
+    required this.activeConversationId,
+    required this.onConversationSelected,
+    required this.onConversationDeleted,
+    required this.onConversationRenamed,
+    required this.onNewConversation,
+  });
 
   @override
   State<CustomDrawer> createState() => _CustomDrawerState();
@@ -16,41 +32,11 @@ class CustomDrawer extends StatefulWidget {
 class _CustomDrawerState extends State<CustomDrawer>
     with TickerProviderStateMixin {
   late AnimationController _drawerAnimationController;
+  final TextEditingController _searchController = TextEditingController();
   late Animation<double> _drawerAnimation;
   String _selectedChatId = '1';
-
-  final List<ChatConversation> _conversations = [
-    ChatConversation(
-      id: '1',
-      title: 'Flutter Development Tips',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      isActive: true,
-    ),
-    ChatConversation(
-      id: '2',
-      title: 'API Integration Guide',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      isActive: true,
-    ),
-    ChatConversation(
-      id: '3',
-      title: 'State Management',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '4',
-      title: 'UI/UX Design Principles',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      isActive: false,
-    ),
-    ChatConversation(
-      id: '5',
-      title: 'Database Integration',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      isActive: false,
-    ),
-  ];
+  List<ChatConversation> _filteredConversations = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -63,6 +49,15 @@ class _CustomDrawerState extends State<CustomDrawer>
       parent: _drawerAnimationController,
       curve: Curves.easeInOut,
     );
+    _filteredConversations = widget.conversation;
+  }
+
+  @override
+  void didUpdateWidget(CustomDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.conversation != widget.conversation) {
+      _filterConversations();
+    }
   }
 
   @override
@@ -71,39 +66,46 @@ class _CustomDrawerState extends State<CustomDrawer>
     super.dispose();
   }
 
-  void _selectChat(String chatId) {
+  void _filterConversations() async {
     setState(() {
-      _selectedChatId = chatId;
-      for (var chat in _conversations) {
-        chat.isActive = chat.id == chatId;
+      if (_searchQuery.isEmpty) {
+        _filteredConversations = widget.conversation;
+      } else {
+        _filteredConversations = ChatHistoryService.searchConversations(
+          widget.conversation,
+          _searchQuery,
+        );
       }
     });
+  }
+
+  void _onSearchChange(String query) {
+    _searchQuery = query;
+    _filteredConversations;
+  }
+
+  void _selectChat(String chatId) {
+    widget.onConversationSelected(chatId);
+
     Navigator.of(context).pop();
   }
 
   void _createNewChat() {
-    setState(() {
-      Navigator.of(context).pop();
-    });
+    widget.onNewConversation();
+
+    Navigator.of(context).pop();
+
     HapticFeedback.lightImpact();
   }
 
   void _deleteChat(String chatId) {
-    setState(() {
-      _conversations.removeWhere((chat) => chat.id == chatId);
-      if (_selectedChatId == chatId && _conversations.isNotEmpty) {
-        _selectedChatId = _conversations.first.id;
-        _conversations.first.isActive = true;
-      }
-    });
+    widget.onConversationDeleted(chatId);
+
     HapticFeedback.mediumImpact();
   }
 
   void _renameChat(String chatId, String newTitle) {
-    setState(() {
-      final chat = _conversations.firstWhere((chat) => chat.id == chatId);
-      chat.title = newTitle;
-    });
+    widget.onConversationRenamed(chatId, newTitle);
   }
 
   void _showRenameDialog(ChatConversation chat) {
@@ -334,6 +336,8 @@ class _CustomDrawerState extends State<CustomDrawer>
 
   Widget _buildSearchBar(bool isDarkMode) {
     return TextField(
+      controller: _searchController,
+      onChanged: _onSearchChange,
       style: GoogleFonts.poppins(
         color: isDarkMode ? Colors.white : Colors.black,
         fontSize: 14.sp,
@@ -369,11 +373,29 @@ class _CustomDrawerState extends State<CustomDrawer>
   }
 
   Widget _buildConversationsList(bool isDarkMode) {
+    if (_filteredConversations.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Text(
+            _searchQuery.isEmpty
+                ? 'No conversations yet.\nStart a new chat!'
+                : 'No conversations found.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+              fontSize: 14.sp,
+            ),
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
-      itemCount: _conversations.length,
+      itemCount: _filteredConversations.length,
       padding: EdgeInsets.zero,
       itemBuilder: (context, index) {
-        final chat = _conversations[index];
+        final chat = _filteredConversations[index];
         return _buildConversationItem(chat, isDarkMode);
       },
     );
@@ -503,20 +525,6 @@ class _CustomDrawerState extends State<CustomDrawer>
       ),
     );
   }
-}
-
-class ChatConversation {
-  final String id;
-  String title;
-  final DateTime timestamp;
-  bool isActive;
-
-  ChatConversation({
-    required this.id,
-    required this.title,
-    required this.timestamp,
-    required this.isActive,
-  });
 }
 
 // Updated Settings Page with Dark Mode Selection

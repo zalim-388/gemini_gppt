@@ -1,8 +1,8 @@
-// Updated HomePage with dark mode support
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gemini_gpt/Ui/Screens/drawer.dart';
+import 'package:gemini_gpt/Ui/Service/history_service.dart';
 import 'package:gemini_gpt/bloc/GeminiGptBloc.dart';
 import 'package:gemini_gpt/bloc/GeminiGptEvent.dart';
 import 'package:gemini_gpt/bloc/GeminiGptState.dart';
@@ -20,7 +20,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  List<Map<String, String>> _messages = [];
+  List<ChatConversation> _conversations = [];
+  String? _activeConversationId;
+  ChatConversation? _activeConversation;
+  bool _isLodingHistory = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory();
+  }
 
   @override
   void dispose() {
@@ -29,17 +38,123 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void _sendMessage() {
-    final inputMessage = _controller.text.trim();
-    if (inputMessage.isEmpty) return;
+  Future<void> _loadChatHistory() async {
+    try {
+      final conversations = await ChatHistoryService.loadConversations();
+      final activeId = await ChatHistoryService.loadActiveConversationId();
+
+      setState(() {
+        _conversations = conversations;
+        _activeConversationId = activeId ?? conversations.first.id;
+        _activeConversation = conversations.firstWhere(
+          (conv) => conv.id == _activeConversationId,
+          orElse: () => conversations.first,
+        );
+        _isLodingHistory = false;
+      });
+    } catch (e) {
+      print("Error loading chat history $e");
+      setState(() {
+        _isLodingHistory = false;
+      });
+    }
+  }
+
+  Future<void> createNewConversation() async {
+    final newconversation = await ChatHistoryService.createNewConversation();
+    setState(() {
+      for (var conv in _conversations) {
+        conv.isActive = false;
+      }
+
+      _conversations.insert(0, newconversation);
+      _activeConversationId = newconversation.id;
+      _activeConversation = newconversation;
+    });
+    await ChatHistoryService.saveConversations(_conversations);
+    await ChatHistoryService.saveActiveConversationId(newconversation.id);
+  }
+
+  Future<void> swichConversation(String conversationId) async {
+    setState(() {
+      for (var conv in _conversations) {
+        conv.isActive = conv.id == conversationId;
+      }
+      _activeConversationId = conversationId;
+      _activeConversation = _conversations.firstWhere(
+        (conv) => conv.id == conversationId,
+      );
+    });
+    await ChatHistoryService.saveActiveConversationId(conversationId);
+    await ChatHistoryService.saveConversations(_conversations);
+  }
+
+  Future<void> deleteConversation(String conversationId) async {
+    await ChatHistoryService.deleteConversation(conversationId, _conversations);
+
+    if (_activeConversationId == conversationId) {
+      if (_conversations.isNotEmpty) {
+        await swichConversation(_conversations.first.id);
+      } else {
+        await createNewConversation();
+      }
+    }
+  }
+
+  Future<void> renameConversation(
+    String conversationId,
+    String newTitle,
+  ) async {
+    await ChatHistoryService.updateConversationTitle(
+      conversationId,
+      newTitle,
+      _conversations,
+    );
 
     setState(() {
-      _messages.add({'type': 'user', 'message': inputMessage});
+      final conversation = _conversations.firstWhere(
+        (conv) => conv.id == conversationId,
+      );
+      conversation.title = newTitle;
     });
+  }
+
+  void _sendMessage() async {
+    final inputMessage = _controller.text.trim();
+    if (inputMessage.isEmpty || _activeConversation == null) return;
+
+    // Check if this is the first message BEFORE adding the user message
+    final isFirstMessage = _activeConversation!.messages.isEmpty;
+
+    final userMessage = ChatMessage(
+      id: 'Msg${DateTime.now().microsecondsSinceEpoch}_user',
+      type: "user",
+      message: inputMessage,
+    );
+
+    setState(() {
+      _activeConversation?.messages.add(userMessage);
+    });
+
+    // Generate title only for the first message
+    if (isFirstMessage) {
+      final newTitle = ChatHistoryService.generateConversationTitle(
+        inputMessage,
+      );
+      _activeConversation?.title = newTitle;
+    }
+
+    // Save the user message to conversation
+    await ChatHistoryService.saveMessageToConversation(
+      _activeConversation!.id,
+      userMessage,
+      _conversations,
+    );
 
     BlocProvider.of<GeminiGptBloc>(
       context,
-    ).add(FetchGeminiGpt(prompt: inputMessage));
+    ).add(FetchGeminiGpt(prompt: userMessage.message));
+
     _controller.clear();
     _scrollToBottom();
   }
@@ -90,7 +205,6 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: Icon(
               Icons.bolt,
-
               color: theme.appBarTheme.foregroundColor,
               size: 24.sp,
             ),
@@ -99,29 +213,72 @@ class _HomePageState extends State<HomePage> {
         ],
         elevation: 0,
       ),
-      drawer: CustomDrawer(),
+      drawer: CustomDrawer(
+        conversation: _conversations,
+        activeConversationId: _activeConversationId,
+        onConversationSelected: swichConversation,
+        onConversationDeleted: deleteConversation,
+        onConversationRenamed: renameConversation,
+        onNewConversation: createNewConversation,
+      ),
       body: Column(
         children: [
           Expanded(
-            child: BlocListener<GeminiGptBloc, GeminiGptState>(
-              listener: (context, state) {
-                if (state is GeminiGptBlocLoaded) {
-                  setState(() {
-                    _messages.add({'type': 'bot', 'message': state.gemini.url});
-                  });
-                  _scrollToBottom();
-                } else if (state is GeminiGptBlocError) {
-                  setState(() {
-                    _messages.add({
-                      'type': 'error',
-                      'message': 'Error: ${state.message}',
-                    });
-                  });
-                  _scrollToBottom();
-                }
-              },
+            child: MultiBlocListener(
+              listeners: [
+                BlocListener<GeminiGptBloc, GeminiGptState>(
+                  listener: (context, state) async {
+                    if (state is GeminiGptBlocLoaded &&
+                        _activeConversation != null) {
+                      final botMessage = ChatMessage(
+                        id: 'Msg${DateTime.now().microsecondsSinceEpoch}_bot',
+                        type: 'bot',
+                        message: state.gemini.url,
+                      );
+                      setState(() {
+                        _activeConversation?.messages.add(botMessage);
+                      });
+                      await ChatHistoryService.saveMessageToConversation(
+                        _activeConversation!.id,
+                        botMessage,
+                        _conversations,
+                      );
+
+                      _scrollToBottom();
+                    } else if (state is GeminiGptBlocError) {
+                      // Avoid duplicate error messages
+                      final lastMessage =
+                          _activeConversation?.messages.isNotEmpty == true
+                              ? _activeConversation!.messages.last
+                              : null;
+
+                      if (lastMessage == null ||
+                          lastMessage.message != 'Error: ${state.message}') {
+                        final errorMessage = ChatMessage(
+                          id: 'Msg${DateTime.now().microsecondsSinceEpoch}_error',
+                          type: "error",
+                          message: 'Error: ${state.message}',
+                        );
+
+                        setState(() {
+                          _activeConversation?.messages.add(errorMessage);
+                        });
+
+                        await ChatHistoryService.saveMessageToConversation(
+                          _activeConversation!.id,
+                          errorMessage,
+                          _conversations,
+                        );
+
+                        _scrollToBottom();
+                      }
+                    }
+                  },
+                ),
+              ],
               child: BlocBuilder<GeminiGptBloc, GeminiGptState>(
                 builder: (context, state) {
+                  final _messages = _activeConversation?.messages ?? [];
                   return _messages.isEmpty
                       ? Center(
                         child: Padding(
@@ -169,11 +326,11 @@ class _HomePageState extends State<HomePage> {
                           }
 
                           final message = _messages[index];
-                          final isUser = message['type'] == 'user';
-                          final isError = message['type'] == 'error';
+                          final isUser = message.type == 'user';
+                          final isError = message.type == 'error';
 
                           return _buildMessageBubble(
-                            message['message']!,
+                            message.message,
                             isUser,
                             isError,
                             isDarkMode,
@@ -211,32 +368,18 @@ class _HomePageState extends State<HomePage> {
         children: [
           if (!isUser) SizedBox(width: 4.w),
           Flexible(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              decoration: BoxDecoration(
+            child: Text(
+              message,
+              style: TextStyle(
                 color:
                     isUser
+                        ? (isDarkMode ? Colors.white : Colors.black87)
+                        : isError
                         ? (isDarkMode
-                            ? Colors.blue.shade700
-                            : Colors.blue.shade100)
-                        : (isDarkMode
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade100),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Text(
-                message,
-                style: TextStyle(
-                  color:
-                      isUser
-                          ? (isDarkMode ? Colors.white : Colors.black87)
-                          : isError
-                          ? (isDarkMode
-                              ? Colors.red.shade300
-                              : Colors.red.shade800)
-                          : (isDarkMode ? Colors.white : Colors.black87),
-                  fontSize: 16.sp,
-                ),
+                            ? Colors.red.shade300
+                            : Colors.red.shade800)
+                        : (isDarkMode ? Colors.white : Colors.black87),
+                fontSize: 16.sp,
               ),
             ),
           ),
@@ -276,7 +419,7 @@ class _HomePageState extends State<HomePage> {
                   "Thinking...",
                   style: GoogleFonts.poppins(
                     color: isDarkMode ? Colors.white70 : Colors.black54,
-                    fontSize: 16.sp,
+                    fontSize: 14.sp,
                   ),
                 ),
               ],
@@ -332,11 +475,11 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     color:
                         isLoading
-                            ? (isDarkMode ? Colors.blue.shade700 : Colors.black)
+                            ? (isDarkMode ? Colors.grey.shade700 : Colors.black)
                             : (_controller.text.trim().isEmpty
                                 ? Colors.grey.shade400
                                 : (isDarkMode
-                                    ? Colors.blue.shade700
+                                    ? Colors.white
                                     : Colors.grey.shade700)),
                     shape: BoxShape.circle,
                   ),
@@ -355,7 +498,7 @@ class _HomePageState extends State<HomePage> {
                             )
                             : Icon(
                               Icons.arrow_upward,
-                              color: Colors.white,
+                              color: (isDarkMode ? Colors.black : Colors.white),
                               size: 20.sp,
                             ),
                     onPressed: isLoading ? null : _sendMessage,
