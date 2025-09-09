@@ -177,15 +177,15 @@ class ChatHistoryService {
     }
   }
 
-  static Future<void> clearAllHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_conversationsKey);
-      await prefs.remove(_activeConversationKey);
-    } catch (e) {
-      print('Error clearing history: $e');
-    }
-  }
+  // static Future<void> clearAllHistory() async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     await prefs.remove(_conversationsKey);
+  //     await prefs.remove(_activeConversationKey);
+  //   } catch (e) {
+  //     print('Error clearing history: $e');
+  //   }
+  // }
 
   static String generateConversationTitle(String firstMessage) {
     if (firstMessage.length <= 30) {
@@ -207,22 +207,22 @@ class ChatHistoryService {
     }
   }
 
-  static Future<bool> importChatHistory(String jsonString) async {
-    try {
-      final data = json.decode(jsonString) as Map<String, dynamic>;
-      final conversationsJson = data['conversations'] as List<dynamic>;
-      final conversations =
-          conversationsJson
-              .map((convJson) => ChatConversation.fromJson(convJson))
-              .toList();
+  // static Future<bool> importChatHistory(String jsonString) async {
+  //   try {
+  //     final data = json.decode(jsonString) as Map<String, dynamic>;
+  //     final conversationsJson = data['conversations'] as List<dynamic>;
+  //     final conversations =
+  //         conversationsJson
+  //             .map((convJson) => ChatConversation.fromJson(convJson))
+  //             .toList();
 
-      await saveConversations(conversations);
-      return true;
-    } catch (e) {
-      print('Error importing chat history: $e');
-      return false;
-    }
-  }
+  //     await saveConversations(conversations);
+  //     return true;
+  //   } catch (e) {
+  //     print('Error importing chat history: $e');
+  //     return false;
+  //   }
+  // }
 
   static List<ChatConversation> _getDefaultConversations() {
     return [
@@ -236,7 +236,6 @@ class ChatHistoryService {
     ];
   }
 
-  // Search conversations by title or message content
   static List<ChatConversation> searchConversations(
     List<ChatConversation> conversations,
     String query,

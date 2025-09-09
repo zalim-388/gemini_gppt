@@ -144,12 +144,12 @@ class _HomePageState extends State<HomePage> {
       _activeConversation?.title = newTitle;
     }
 
-    // Save the user message to conversation
-    await ChatHistoryService.saveMessageToConversation(
-      _activeConversation!.id,
-      userMessage,
-      _conversations,
-    );
+    // // Save the user message to conversation
+    // await ChatHistoryService.saveMessageToConversation(
+    //   _activeConversation!.id,
+    //   userMessage,
+    //   _conversations,
+    // );
 
     BlocProvider.of<GeminiGptBloc>(
       context,
@@ -238,15 +238,15 @@ class _HomePageState extends State<HomePage> {
                       setState(() {
                         _activeConversation?.messages.add(botMessage);
                       });
-                      await ChatHistoryService.saveMessageToConversation(
-                        _activeConversation!.id,
-                        botMessage,
-                        _conversations,
-                      );
+
+                      // await ChatHistoryService.saveMessageToConversation(
+                      //   _activeConversation!.id,
+                      //   botMessage,
+                      //   _conversations,
+                      // );
 
                       _scrollToBottom();
                     } else if (state is GeminiGptBlocError) {
-                      // Avoid duplicate error messages
                       final lastMessage =
                           _activeConversation?.messages.isNotEmpty == true
                               ? _activeConversation!.messages.last
@@ -439,7 +439,7 @@ class _HomePageState extends State<HomePage> {
             controller: _controller,
             maxLines: null,
             textInputAction: TextInputAction.send,
-            onSubmitted: (_) => isLoading ? null : _sendMessage(),
+            // onSubmitted: (_) => isLoading ? null : _sendMessage(),
             style: GoogleFonts.poppins(
               color: isDarkMode ? Colors.white : Colors.black,
               fontSize: 16.sp,
