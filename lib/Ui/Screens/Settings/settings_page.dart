@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gemini_gpt/Ui/Authentication/Login_screen.dart';
 import 'package:gemini_gpt/Ui/Screens/Settings/About_page.dart';
+import 'package:gemini_gpt/Ui/Screens/Settings/Upgrade_to_Pro.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -29,7 +30,7 @@ class SettingsPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
+            Icons.arrow_back_ios,
             color: theme.appBarTheme.foregroundColor,
           ),
           onPressed: () => Navigator.of(context).pop(),
@@ -58,18 +59,19 @@ class SettingsPage extends StatelessWidget {
             _buildSettingItem(
               icon: Icons.bolt,
               title: "Upgrade to Pro",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UpgradeToProPage(),
+                  ),
+                );
+              },
               isDarkMode: isDarkMode,
             ),
             SizedBox(height: 8.h),
             _buildThemeSettingItem(context, themeProvider, isDarkMode),
-            SizedBox(height: 8.h),
-            _buildSettingItem(
-              icon: Icons.lock_outline,
-              title: 'Privacy Policy',
-              onTap: () {},
-              isDarkMode: isDarkMode,
-            ),
+
             SizedBox(height: 8.h),
             _buildSettingItem(
               icon: Icons.info_outline,

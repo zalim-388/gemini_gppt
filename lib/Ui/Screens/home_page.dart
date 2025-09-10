@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:gemini_gpt/Ui/Screens/Settings/Upgrade_to_Pro.dart';
 import 'package:gemini_gpt/Ui/Screens/drawer.dart';
 import 'package:gemini_gpt/Ui/Service/history_service.dart';
 import 'package:gemini_gpt/bloc/GeminiGptBloc.dart';
@@ -208,7 +209,12 @@ class _HomePageState extends State<HomePage> {
               color: theme.appBarTheme.foregroundColor,
               size: 24.sp,
             ),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UpgradeToProPage()),
+              );
+            },
           ),
         ],
         elevation: 0,

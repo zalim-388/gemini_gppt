@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _isPasswordVisible = false;
   // final FirebaseAuth _auth = FirebaseAuth.instance;
   // final AuthService _authService = AuthService();
-  bool _isLoading = false;
+  // bool _isLoading = false;
 
   // Future<void> loginguser() async {
   //   try {

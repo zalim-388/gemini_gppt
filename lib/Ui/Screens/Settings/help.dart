@@ -17,7 +17,7 @@ class HelpCenterPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
+          Icons.arrow_back_ios,
             color: theme.appBarTheme.foregroundColor,
             size: 24.sp,
           ),
