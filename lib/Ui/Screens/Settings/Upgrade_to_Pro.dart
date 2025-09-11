@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gemini_gpt/Ui/Screens/Settings/success.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -68,7 +70,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
           (context) => Center(
             child: CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                isDarkMode ? Colors.white : const Color(0xFF4F46E5),
+                isDarkMode ? Colors.white : Colors.black,
               ),
             ),
           ),
@@ -81,64 +83,17 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
       showPayment = false;
     });
 
-    _showSuccessDialog();
+    _showSuccessDialog(context);
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor:
-                isDarkMode ? const Color(0xFF2D2D2D) : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: isDarkMode ? Colors.greenAccent : Colors.green,
-                  size: 28.sp,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  'Welcome to Pro!',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              'Payment successful! You now have access to all premium features.',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white70 : Colors.black54,
-                fontSize: 14.sp,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? Colors.blueAccent
-                            : const Color(0xFF4F46E5),
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
+      barrierDismissible: false,
+      builder: (context) => AnimatedSuccessDialog(isDarkMode: isDarkMode),
     );
   }
 
@@ -152,14 +107,14 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
       appBar: AppBar(
         title: Text(
           'Upgrade to pro',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: isDarkMode ? Colors.white : Colors.black87,
             fontSize: 18.sp,
           ),
         ),
         backgroundColor: Colors.transparent,
-        elevation: 0,
+
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios,
@@ -249,7 +204,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
               ).createShader(bounds),
           child: Text(
             'Upgrade to Pro',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 32.sp,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -259,7 +214,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
         SizedBox(height: 8.h),
         Text(
           'Unlock premium features for your Gemini GPT experience',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 16.sp,
             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
           ),
@@ -273,7 +228,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
     return Row(
       children: [
         Expanded(child: _buildFreePlan(isDarkMode, theme)),
-        SizedBox(width: 16.w),
+        SizedBox(width: 15.w),
         Expanded(child: _buildProPlan(isDarkMode, theme)),
       ],
     );
@@ -284,47 +239,168 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
       transform: Matrix4.identity()..scale(isSelected ? 1.05 : 1.0),
-      child: Card(
-        color: isDarkMode ? const Color(0xFF2D2D2D) : Colors.white,
-        elevation: isSelected ? 8 : 4,
-        shape: RoundedRectangleBorder(
+      //   elevation: isSelected ? 12 : 8,
+      child: Container(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
-          side: BorderSide(
+          color: isDarkMode ? Color(0xFF2D2D2D) : Colors.white,
+          border: Border.all(
             color:
                 isSelected
                     ? (isDarkMode ? Colors.grey[600]! : Colors.grey[400]!)
                     : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
             width: 2.w,
           ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors:
-                  isDarkMode
-                      ? [Color(0xFF2D2D2D), Colors.white.withOpacity(0.1)]
-                      : [Colors.white, Color(0xFF2D2D2D)],
-            ),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+
+            colors:
+                isDarkMode
+                    ? [Color(0xFF2D2D2D), Colors.white.withOpacity(0.1)]
+                    : [Colors.white, Color(0xFF2D2D2D)],
           ),
-          child: Padding(
-            padding: EdgeInsets.all(20.w),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.star_outline,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    size: 24.sp,
+                  ),
+                  SizedBox(width: 4.w),
+                  Expanded(
+                    child: Text(
+                      'Freemium',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$0',
+                    style: GoogleFonts.poppins(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    '/forever',
+                    style: GoogleFonts.poppins(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20.h),
+              ..._buildFeatureList(
+                [
+                  'Basic Gemini AI responses',
+                  '10 requests per day',
+                  'Standard response time',
+                  'Community support',
+                ],
+                Colors.green,
+                isDarkMode,
+              ),
+              SizedBox(height: 20.h),
+              SizedBox(
+                height: 48.h,
+
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _handleUpgrade('free'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isSelected
+                            ? (isDarkMode ? Colors.grey[700] : Colors.grey[800])
+                            : (isDarkMode
+                                ? Colors.grey[800]
+                                : Colors.grey[100]),
+                    foregroundColor:
+                        isSelected
+                            ? Colors.white
+                            : (isDarkMode ? Colors.white : Colors.grey[800]),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  child: Text(
+                    isSelected ? 'Current Plan' : 'Stay Free',
+                    style: GoogleFonts.poppins(fontSize: 14.sp),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProPlan(bool isDarkMode, ThemeData theme) {
+    final isSelected = selectedPlan == 'pro';
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 300),
+      transform: Matrix4.identity()..scale(isSelected ? 1.05 : 1.0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        //  elevation: isSelected ? 12 : 8,
+        children: [
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: isDarkMode ? const Color(0xFF2D2D2D) : Colors.white,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey[700]! : Colors.grey[400]!,
+                width: 2.w,
+              ),
+
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors:
+                    isDarkMode
+                        ? [Color(0xFF2D2D2D), Colors.white.withOpacity(0.1)]
+                        : [Colors.white, Color(0xFF2D2D2D)],
+              ),
+            ),
+
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.star_outline,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      Icons.workspace_premium,
                       size: 24.sp,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     ),
-                    SizedBox(width: 8.w),
+
+                    SizedBox(width: 4.w),
                     Text(
-                      'Freemium',
-                      style: TextStyle(
+                      'Premium',
+                      style: GoogleFonts.poppins(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
                         color: isDarkMode ? Colors.white : Colors.black87,
@@ -333,42 +409,49 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                   ],
                 ),
                 SizedBox(height: 12.h),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: 6.w,
                   children: [
                     Text(
-                      '\$0',
-                      style: TextStyle(
+                      '\$0.10',
+                      style: GoogleFonts.poppins(
                         fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
                         color: isDarkMode ? Colors.white : Colors.black87,
                       ),
                     ),
                     Text(
-                      '/forever',
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      '/one-time',
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
                   ],
                 ),
+
                 SizedBox(height: 20.h),
                 ..._buildFeatureList(
                   [
-                    'Basic Gemini AI responses',
-                    '10 requests per day',
-                    'Standard response time',
-                    'Community support',
+                    'Unlimited Gemini AI requests',
+                    'Priority response time',
+                    'Advanced conversation modes',
+                    'Export chat history',
+                    'Premium support',
+                    'No ads',
                   ],
                   Colors.green,
                   isDarkMode,
                 ),
                 SizedBox(height: 20.h),
                 SizedBox(
+                  height: 48.h,
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _handleUpgrade('free'),
+                    onPressed: () => _handleUpgrade('pro'),
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           isSelected
@@ -386,153 +469,23 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.r),
                       ),
+                      elevation: 4,
                     ),
-                    child: Text(
-                      isSelected ? 'Current Plan' : 'Stay Free',
-                      style: TextStyle(fontSize: 14.sp),
+
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(Icons.flash_on, size: 18.sp),
+
+                        Text(
+                          'Upgrade to Pro',
+                          style: GoogleFonts.poppins(fontSize: 14.sp),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProPlan(bool isDarkMode, ThemeData theme) {
-    final isSelected = selectedPlan == 'pro';
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      transform: Matrix4.identity()..scale(isSelected ? 1.05 : 1.0),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Card(
-            color: isDarkMode ? const Color(0xFF2D2D2D) : Colors.white,
-            elevation: isSelected ? 12 : 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-              side: BorderSide(
-                color: isDarkMode ? Colors.grey[700]! : Colors.grey[400]!,
-                width: 2.w,
-              ),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors:
-                      isDarkMode
-                          ? [Color(0xFF2D2D2D), Colors.white.withOpacity(0.1)]
-                          : [Colors.white, Color(0xFF2D2D2D)],
-                ),
-              ),
-              padding: EdgeInsets.all(20.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      ShaderMask(
-                        shaderCallback:
-                            (bounds) => LinearGradient(
-                              colors:
-                                  isDarkMode
-                                      ? [Colors.grey[400]!, Colors.grey[600]!]
-                                      : [],
-                            ).createShader(bounds),
-                        child: Icon(
-                          Icons.workspace_premium,
-                          color: Colors.white,
-                          size: 24.sp,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Promium',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '\$0.10',
-                        style: TextStyle(
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-
-                      Text(
-                        '/one-time',
-                        style: TextStyle(
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20.h),
-                  ..._buildFeatureList(
-                    [
-                      'Unlimited Gemini AI requests',
-                      'Priority response time',
-                      'Advanced conversation modes',
-                      'Export chat history',
-                      'Premium support',
-                      'No ads',
-                    ],
-                    Colors.green,
-                    isDarkMode,
-                  ),
-                  SizedBox(height: 20.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _handleUpgrade('pro'),
-                      icon: Icon(Icons.flash_on, size: 18.sp),
-                      label: Text(
-                        'Upgrade to Pro',
-                        style: TextStyle(fontSize: 14.sp),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isSelected
-                                ? (isDarkMode
-                                    ? Colors.grey[700]
-                                    : Colors.grey[800])
-                                : (isDarkMode
-                                    ? Colors.grey[800]
-                                    : Colors.grey[100]),
-                        foregroundColor:
-                            isSelected
-                                ? Colors.white
-                                : (isDarkMode
-                                    ? Colors.white
-                                    : Colors.grey[800]),
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        elevation: 4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
 
@@ -555,7 +508,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                 ),
                 child: Text(
                   'Most Popular',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     color: isDarkMode ? Colors.white : Colors.black,
                     fontSize: 12.sp,
                     fontWeight: FontWeight.bold,
@@ -585,7 +538,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                 Expanded(
                   child: Text(
                     feature,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       color: isDarkMode ? Colors.white70 : Colors.black87,
                     ),
@@ -603,7 +556,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
       children: [
         Text(
           'Why upgrade to Pro?',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 24.sp,
             fontWeight: FontWeight.bold,
             color: isDarkMode ? Colors.white : Colors.black87,
@@ -612,7 +565,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
         SizedBox(height: 8.h),
         Text(
           'Get unlimited access for just 10 cents',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 16.sp,
             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
           ),
@@ -663,7 +616,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
           end: Alignment.bottomRight,
           colors:
               isDarkMode
-                  ? [Color(0xFF2D2D2D)]
+                  ? [Colors.white, Color(0xFF2D2D2D)]
                   : [Colors.white, Color(0xFF2D2D2D)],
         ),
         borderRadius: BorderRadius.circular(12.r),
@@ -692,7 +645,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
             SizedBox(height: 12.h),
             Text(
               title,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
                 color: isDarkMode ? Colors.white : Colors.black,
@@ -701,7 +654,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
             SizedBox(height: 4.h),
             Text(
               description,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 color: isDarkMode ? Colors.white : Colors.black,
               ),
@@ -751,7 +704,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                 SizedBox(height: 16.h),
                 Text(
                   'Complete Your Upgrade',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.black87,
@@ -760,7 +713,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                 SizedBox(height: 8.h),
                 Text(
                   'One-time payment of \$0.10',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     fontSize: 14.sp,
                   ),
@@ -786,7 +739,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                     ),
                     label: Text(
                       'Pay with Google Pay',
-                      style: TextStyle(fontSize: 14.sp),
+                      style: GoogleFonts.poppins(fontSize: 14.sp),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -811,7 +764,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                   onPressed: () => setState(() => showPayment = false),
                   child: Text(
                     'Cancel',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       fontSize: 14.sp,
                     ),
@@ -836,7 +789,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                       Expanded(
                         child: Text(
                           'Secure payment • One-time purchase • No subscription',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             color:
                                 isDarkMode

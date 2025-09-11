@@ -333,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen>
       height: 50.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
-        gradient: const LinearGradient(colors: [Colors.black, Colors.grey]),
+        gradient: LinearGradient(colors: [Colors.black, Colors.grey]),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -376,39 +376,29 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildGoogleLoginButton() {
-    return Container(
-      height: 50.h,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: Offset(4.w, 4.h),
-            blurRadius: 8.r,
-          ),
-          BoxShadow(
-            color: Colors.grey.shade400,
-            offset: Offset(-4.w, -4.h),
-            blurRadius: 8.r,
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle Google login
-          //   signInWithGoogle();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        height: 50.h,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: Offset(4.w, 4.h),
+              blurRadius: 8.r,
+            ),
+            BoxShadow(
+              color: Colors.grey.shade400,
+              offset: Offset(-4.w, -4.h),
+              blurRadius: 8.r,
+            ),
+          ],
         ),
+
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -419,12 +409,14 @@ class _LoginScreenState extends State<LoginScreen>
               height: 24.h,
               fit: BoxFit.contain,
             ),
-            SizedBox(width: 12.w),
+            SizedBox(width: 8.w),
             Text(
+              textAlign: TextAlign.center,
               'Continue with Google',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
                 letterSpacing: 0.5,
               ),
             ),

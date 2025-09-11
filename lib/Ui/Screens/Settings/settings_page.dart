@@ -62,9 +62,7 @@ class SettingsPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => UpgradeToProPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => UpgradeToProPage()),
                 );
               },
               isDarkMode: isDarkMode,
@@ -127,128 +125,122 @@ class SettingsPage extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
     );
   }
+void _showThemeSelectionDialog(
+  BuildContext context,
+  ThemeProvider themeProvider,
+  bool isDarkMode,
+) {
+  ThemeMode tempMode = themeProvider.themeMode;
 
-  void _showThemeSelectionDialog(
-    BuildContext context,
-    ThemeProvider themeProvider,
-    bool isDarkMode,
-  ) {
-    ThemeMode tempMode = themeProvider.themeMode;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24.r),
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24.r),
+            ),
+            title: Text(
+              'Color Scheme',
+              style: GoogleFonts.poppins(
+                color: isDarkMode ? Colors.white : Colors.black,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
               ),
-              title: Text(
-                'Color Scheme',
-                style: GoogleFonts.poppins(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildThemeOption(
+                    context,
+                    title: 'System (Default)',
+                    themeMode: ThemeMode.system,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+                  _buildThemeOption(
+                    context,
+                    title: 'Light',
+                    themeMode: ThemeMode.light,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+                  _buildThemeOption(
+                    context,
+                    title: 'Dark',
+                    themeMode: ThemeMode.dark,
+                    currentThemeMode: tempMode,
+                    onChanged: (ThemeMode? value) {
+                      if (value != null) {
+                        setState(() => tempMode = value);
+                      }
+                    },
+                    isDarkMode: isDarkMode,
+                  ),
+                ],
               ),
-              content: Container(
-                height: 150.h,
-                width: 220.w,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildThemeOption(
-                      context,
-                      title: 'System (Default)',
-                      themeMode: ThemeMode.system,
-                      currentThemeMode: tempMode,
-                      onChanged: (ThemeMode? value) {
-                        if (value != null) {
-                          setState(() => tempMode = value);
-                        }
-                      },
-                      isDarkMode: isDarkMode,
-                    ),
-                    _buildThemeOption(
-                      context,
-                      title: 'Light',
-                      themeMode: ThemeMode.light,
-                      currentThemeMode: tempMode,
-                      onChanged: (ThemeMode? value) {
-                        if (value != null) {
-                          setState(() => tempMode = value);
-                        }
-                      },
-                      isDarkMode: isDarkMode,
-                    ),
-                    _buildThemeOption(
-                      context,
-                      title: 'Dark',
-                      themeMode: ThemeMode.dark,
-                      currentThemeMode: tempMode,
-                      onChanged: (ThemeMode? value) {
-                        if (value != null) {
-                          setState(() => tempMode = value);
-                        }
-                      },
-                      isDarkMode: isDarkMode,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    themeProvider.setThemeMode(tempMode);
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'OK',
-                    style: GoogleFonts.poppins(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                      fontSize: 14.sp,
-                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  themeProvider.setThemeMode(tempMode);
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.poppins(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                    fontSize: 14.sp,
                   ),
                 ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
-  Widget _buildThemeOption(
-    BuildContext context, {
-    required String title,
-    required ThemeMode themeMode,
-    required ThemeMode currentThemeMode,
-    required Function(ThemeMode?) onChanged,
-    required bool isDarkMode,
-  }) {
-    return RadioListTile<ThemeMode>(
-      title: Row(
-        children: [
-          SizedBox(width: 8.w),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              color: isDarkMode ? Colors.white : Colors.black,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+Widget _buildThemeOption(
+  BuildContext context, {
+  required String title,
+  required ThemeMode themeMode,
+  required ThemeMode currentThemeMode,
+  required Function(ThemeMode?) onChanged,
+  required bool isDarkMode,
+}) {
+  return RadioListTile<ThemeMode>(
+    title: Text(
+      title,
+      style: GoogleFonts.poppins(
+        color: isDarkMode ? Colors.white : Colors.black,
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w500,
       ),
-      value: themeMode,
-      groupValue: currentThemeMode,
-      onChanged: onChanged,
-      activeColor: isDarkMode ? Colors.white : Colors.black,
-    );
-  }
-
+    ),
+    value: themeMode,
+    groupValue: currentThemeMode,
+    onChanged: onChanged,
+    activeColor: isDarkMode ? Colors.white : Colors.black,
+    contentPadding: EdgeInsets.zero,
+  );
+}
   Widget _buildSettingItem({
     required IconData icon,
     bool isLogout = false,
@@ -312,40 +304,45 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
           ],
         ),
         content: SizedBox(
-          height: 100.h,
-          width: 100.h,
+          width: double.maxFinite,
           child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Are you sure you\nwant to log out?',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode ? Colors.white70 : Colors.black87,
+              Expanded(
+                flex: 3,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Are you sure you\nwant to log out?',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'You will need to sign in \nagain to access your\naccount.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      color:
-                          isDarkMode
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                    SizedBox(height: 4.h),
+                    Text(
+                      'You will need to sign in again to access your account.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        color:
+                            isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              SizedBox(width: 10.w),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-
                     child: Icon(
                       Icons.cancel_outlined,
                       size: 20.sp,
@@ -355,7 +352,7 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
                               : Colors.grey.shade600,
                     ),
                   ),
-                  SizedBox(width: 10.w),
+                  SizedBox(height: 12.h),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
@@ -363,7 +360,6 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
                         MaterialPageRoute(builder: (context) => LoginScreen()),
                       );
                     },
-
                     child: Icon(
                       Icons.logout,
                       size: 20.sp,

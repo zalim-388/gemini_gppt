@@ -5,7 +5,6 @@ import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gemini_gpt/Ui/Authentication/Login_screen.dart';
 import 'package:gemini_gpt/bloc/GeminiGptBloc.dart';
-
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:provider/provider.dart';
 

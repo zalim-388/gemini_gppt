@@ -21,10 +21,10 @@ class AboutPage extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.appBarTheme.backgroundColor,
-        elevation: 0,
+
         leading: IconButton(
           icon: Icon(
-           Icons.arrow_back_ios,
+            Icons.arrow_back_ios,
             color: theme.appBarTheme.foregroundColor,
             size: 24.sp,
           ),
