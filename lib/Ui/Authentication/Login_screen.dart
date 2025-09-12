@@ -27,10 +27,15 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> loginguser() async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+   UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+  email: _emailController.text.trim(),
+  password: _passwordController.text.trim(),
+);
+print("Login email: '${_emailController.text}'");
+print("Login password: '${_passwordController.text}'");
+
+
+
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
@@ -44,11 +49,18 @@ class _LoginScreenState extends State<LoginScreen>
           );
         }
       }
-    } on FirebaseAuthException catch (e) {
-      print("FirebaseAuth Error$e");
-    } catch (e) {
-      print("Unexpected login error: $e");
-    }
+} on FirebaseAuthException catch (e) {
+  if (e.code == 'invalid-credential') {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Invalid email or password. Please try again.')),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: ${e.message}')),
+    );
+  }
+}
+
   }
 
   Future<void> signInWithGoogle() async {
@@ -60,8 +72,6 @@ class _LoginScreenState extends State<LoginScreen>
       final UserCredential = await _authService.signInWithGoogle();
       final user = UserCredential?.user;
       if (user != null && mounted) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
         setState(() {
           _passwordController.text = user.email ?? "";
           _emailController.text = user.email ?? "";
@@ -70,6 +80,8 @@ class _LoginScreenState extends State<LoginScreen>
             MaterialPageRoute(builder: (context) => HomePage()),
           );
         });
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
       }
     } catch (e) {
       if (mounted) {
@@ -138,52 +150,57 @@ class _LoginScreenState extends State<LoginScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                  AnimatedBuilder(
-  animation: _glowAnimation,
-  builder: (context, child) {
-    return Container(
-      padding: EdgeInsets.all(6.w), // outer padding for second circle
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: 2.w, // outer circle thickness
-        ),
-      ),
-      child: Container(
-        padding: EdgeInsets.all(15.w),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white, width: 4.w), // inner circle
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color.lerp(
-                Colors.grey.shade400.withOpacity(0.2),
-                Colors.grey.shade400.withOpacity(0.6),
-                _glowAnimation.value,
-              )!,
-              blurRadius: 20.r,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Image.asset(
-          "assets/logo-removebg-preview.png",
-          fit: BoxFit.contain,
-          height: 45.h,
-          width: 40.w,
-        ),
-      ),
-    );
-  },
-),
+                    AnimatedBuilder(
+                      animation: _glowAnimation,
+                      builder: (context, child) {
+                        return Container(
+                          padding: EdgeInsets.all(
+                            6.w,
+                          ), // outer padding for second circle
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2.w, // outer circle thickness
+                            ),
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(15.w),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 4.w,
+                              ), // inner circle
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      Color.lerp(
+                                        Colors.grey.shade400.withOpacity(0.2),
+                                        Colors.grey.shade400.withOpacity(0.6),
+                                        _glowAnimation.value,
+                                      )!,
+                                  blurRadius: 20.r,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              "assets/logo-removebg-preview.png",
+                              fit: BoxFit.contain,
+                              height: 45.h,
+                              width: 40.w,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
 
-
-                     // child: Icon(
-                          //   Icons.memory,
-                          //   size: 32.sp,
-                          //   color: Colors.black,
-                          // ),
+                    // child: Icon(
+                    //   Icons.memory,
+                    //   size: 32.sp,
+                    //   color: Colors.black,
+                    // ),
                     SizedBox(height: 32.h),
 
                     // Title

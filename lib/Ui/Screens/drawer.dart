@@ -1,9 +1,10 @@
 // Fixed CustomDrawer with proper history deletion and popup menu
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:gemini_gpt/Ui/Service/history_service.dart';
 import 'package:gemini_gpt/Ui/Screens/Settings/settings_page.dart';
+import 'package:gemini_gpt/Ui/Service/history_service.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -555,6 +556,11 @@ class _CustomDrawerState extends State<CustomDrawer>
   }
 
   Widget _buildDrawerFooter(bool isDarkMode) {
+    final User? user = FirebaseAuth.instance.currentUser;
+    final String displayName = user?.displayName ?? user?.email ?? "Guest User";
+    final String firstLetter =
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : "U";
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -565,28 +571,40 @@ class _CustomDrawerState extends State<CustomDrawer>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.person_outlined,
-            color: isDarkMode ? Colors.white : Colors.black,
-            size: 20.sp,
-          ),
-          SizedBox(width: 8.w),
-          Text(
-            'User Account',
-            style: GoogleFonts.poppins(
-              color:
-                  isDarkMode
-                      ? Colors.white.withOpacity(0.9)
-                      : Colors.black.withOpacity(0.9),
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
+          CircleAvatar(
+            radius: 16.r,
+            backgroundColor: isDarkMode ? Colors.white30 : Colors.black,
+
+            child: Text(
+              firstLetter,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16.sp,
+              
+              ),
             ),
           ),
-          SizedBox(width: 4.w),
+          SizedBox(width: 10.w),
+
+          // User Name / Email
+          Expanded(
+            child: Text(
+              displayName,
+              style: GoogleFonts.poppins(
+                color:
+                    isDarkMode
+                        ? Colors.white.withOpacity(0.9)
+                        : Colors.black.withOpacity(0.9),
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+
           Icon(
             Icons.keyboard_arrow_down,
             color: isDarkMode ? Colors.white : Colors.black,
-            size: 14.sp,
+            size: 20.sp,
           ),
         ],
       ),

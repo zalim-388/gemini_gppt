@@ -44,12 +44,7 @@ class SettingsPage extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(height: 16.h),
-            _buildSettingItem(
-              icon: Icons.person_outlined,
-              title: "User Account",
-              onTap: () {},
-              isDarkMode: isDarkMode,
-            ),
+            _builduser(isDarkMode, context),
             SizedBox(height: 8.h),
             _buildSettingItem(
               icon: Icons.email_outlined,
@@ -394,5 +389,56 @@ Future<void> _logout(BuildContext context) async {
     context,
     MaterialPageRoute(builder: (context) => const LoginScreen()),
     (route) => false,
+  );
+}
+
+Widget _builduser(bool isDarkMode, BuildContext context) {
+  final User? user = FirebaseAuth.instance.currentUser;
+  final String displayName = user?.displayName ?? user?.email ?? "Guest User";
+  final String firstLetter =
+      displayName.isNotEmpty ? displayName[0].toUpperCase() : "U";
+
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SettingsPage()),
+      );
+    },
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 16.r,
+          backgroundColor: isDarkMode ? Colors.white30 : Colors.black,
+          child: Text(
+            firstLetter,
+            style: TextStyle(color: Colors.white, fontSize: 16.sp),
+          ),
+        ),
+        SizedBox(width: 10),
+
+        // User Name / Email
+        Expanded(
+          child: Text(
+            displayName,
+            style: GoogleFonts.poppins(
+              color:
+                  isDarkMode
+                      ? Colors.white.withOpacity(0.9)
+                      : Colors.black.withOpacity(0.9),
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+
+        Icon(
+          Icons.keyboard_arrow_down,
+          color: isDarkMode ? Colors.white : Colors.black,
+          size: 20.sp,
+        ),
+      ],
+    ),
   );
 }

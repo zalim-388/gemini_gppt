@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.gemini_gpt"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35 // Replace flutter.targetSdkVersion if undefined
         versionCode = 1 // Replace flutter.versionCode if undefined
         versionName = "1.0" // Replace flutter.versionName if undefined
