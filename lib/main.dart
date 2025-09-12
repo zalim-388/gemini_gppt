@@ -1,26 +1,34 @@
 // main.dart
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gemini_gpt/Ui/Authentication/Login_screen.dart';
+import 'package:gemini_gpt/Ui/Screens/home_page.dart';
 import 'package:gemini_gpt/bloc/GeminiGptBloc.dart';
+import 'package:gemini_gpt/firebase_options.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String apikeyy = "AIzaSyCHztN3IPc9Y_8lEsv7v_UiIG1Ich7cbGE";
 
 void main() async {
-  Gemini.init(apiKey: apikeyy, enableDebugging: true);
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
-  runApp(const MyApp());
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  Gemini.init(apiKey: apikeyy, enableDebugging: true);
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  bool isLoggedIn = prefs.getBool("isLoggedIn") ?? false;
+
+  runApp(MyApp(isloggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isloggedIn;
+  const MyApp({super.key, required this.isloggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +74,7 @@ class MyApp extends StatelessWidget {
                       elevation: 0,
                     ),
                   ),
-                  home: LoginScreen(),
+                  home: isloggedIn ? HomePage() : LoginScreen(),
                 ),
           );
         },

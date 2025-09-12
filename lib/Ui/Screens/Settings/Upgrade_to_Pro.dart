@@ -7,6 +7,7 @@ import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UpgradeToProPage extends StatefulWidget {
   const UpgradeToProPage({Key? key}) : super(key: key);
@@ -59,10 +60,25 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
   }
 
   void _handleGooglePay() async {
+    final upiId = "zaalim388@okaxis";
+    final name = "Gemini GPT";
+    final note = "Upgrade to Pro";
+    final double amountUsd = 0.11; // USD
+    final double usdToInrRate = 83.0; // Example conversion rate
+    final double amountInr = amountUsd * usdToInrRate;
+
+    // Construct UPI URL with Google Pay-specific parameters
+    // TODO: Add unique transaction ID, e.g., &tr=unique_txn_${DateTime.now().millisecondsSinceEpoch}
+    final Uri uri = Uri.parse(
+      "upi://pay?pa=$upiId&pn=$name&tn=$note&am=${amountInr.toStringAsFixed(2)}&cu=INR&app=com.google.android.apps.nbu.paisa.user",
+    );
+
+    print("Payable: \$$amountUsd (≈ ₹${amountInr.toStringAsFixed(2)})");
+
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
-    // Simulate Google Pay process
+    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -76,14 +92,56 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
           ),
     );
 
-    await Future.delayed(const Duration(seconds: 2));
+    bool launched = false;
+    try {
 
-    Navigator.of(context).pop();
-    setState(() {
-      showPayment = false;
-    });
+      if (await canLaunchUrl(uri)) {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) {
+         
+          await Future.delayed(
+            const Duration(seconds: 10),
+          ); 
 
-    _showSuccessDialog(context);
+          Navigator.of(context).pop(); 
+
+          bool paymentSuccessful =
+              true; 
+
+          if (paymentSuccessful) {
+            await ProStatusManager.setProStatus(true);
+            setState(() {
+              showPayment = false;
+              selectedPlan = 'pro';
+            });
+            _showSuccessDialog(
+              context,
+            ); 
+          }
+        } else {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Could not launch Google Pay")),
+          );
+        }
+      } else {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Google Pay is not installed or cannot handle UPI payments",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error processing payment: $e")));
+    }
+
+    // If not launched, no success dialog shown
   }
 
   void _showSuccessDialog(BuildContext context) {
@@ -415,7 +473,7 @@ class _UpgradeToProPageState extends State<UpgradeToProPage>
                   spacing: 6.w,
                   children: [
                     Text(
-                      '\$0.10',
+                      '\$0.11',
                       style: GoogleFonts.poppins(
                         fontSize: 28.sp,
                         fontWeight: FontWeight.bold,

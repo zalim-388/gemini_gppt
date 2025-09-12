@@ -1,8 +1,11 @@
 // import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:gemini_gpt/Ui/Screens/home_page.dart';
+import 'package:gemini_gpt/Ui/Service/Auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,63 +21,68 @@ class _LoginScreenState extends State<LoginScreen>
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
   bool _isPasswordVisible = false;
-  // final FirebaseAuth _auth = FirebaseAuth.instance;
-  // final AuthService _authService = AuthService();
-  // bool _isLoading = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
-  // Future<void> loginguser() async {
-  //   try {
-  //     UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-  //         email: _emailController.text, password: _passwordController.text);
+  Future<void> loginguser() async {
+    try {
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
-  //     User? user = userCredential.user;
-  //     if (user != null) {
-  //       if (user.emailVerified) {
-  //         Navigator.pushReplacement(
-  //             context,
-  //             MaterialPageRoute(
-  //               builder: (context) => HomePage(),
-  //             ));
-  //       }
-  //     }
-  //   } on FirebaseAuthException catch (e) {
-  //     print("FirebaseAuth Error$e");
-  //   } catch (e) {
-  //     print("Unexpected login error: $e");
-  //   }
-  //   return;
-  // }
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
 
-  // Future<void> signInWithGoogle() async {
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
+      User? user = userCredential.user;
+      if (user != null) {
+        if (user.emailVerified) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print("FirebaseAuth Error$e");
+    } catch (e) {
+      print("Unexpected login error: $e");
+    }
+  }
 
-  //   try {
-  //     final UserCredential = await _authService.signInWithGoogle();
-  //     final user = UserCredential?.user;
-  //     if (user != null && mounted) {
-  //       setState(() {
-  //         _passwordController.text = user.email ?? "";
-  //         _emailController.text = user.email ?? "";
-  //         Navigator.pushReplacement(
-  //           context,
-  //           MaterialPageRoute(builder: (context) => HomePage()),
-  //         );
-  //       });
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       print("Error in google sign in $e");
-  //     }
-  //   } finally {
-  //     if (mounted) {
-  //       setState(() {
-  //         _isLoading = false;
-  //       });
-  //     }
-  //   }
-  // }
+  Future<void> signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final UserCredential = await _authService.signInWithGoogle();
+      final user = UserCredential?.user;
+      if (user != null && mounted) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        setState(() {
+          _passwordController.text = user.email ?? "";
+          _emailController.text = user.email ?? "";
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        print("Error in google sign in $e");
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -130,41 +138,52 @@ class _LoginScreenState extends State<LoginScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    AnimatedBuilder(
-                      animation: _glowAnimation,
-                      builder: (context, child) {
-                        return Container(
-                          padding: EdgeInsets.all(15.w),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 4.w),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    Color.lerp(
-                                      Colors.grey.shade400.withOpacity(0.2),
-                                      Colors.grey.shade400.withOpacity(0.6),
-                                      _glowAnimation.value,
-                                    )!,
-                                blurRadius: 20.r,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Image.asset(
-                            "assets/logo-removebg-preview.png",
-                            fit: BoxFit.contain,
-                            height: 45.h,
-                            width: 40.w,
-                          ),
-                          // child: Icon(
+                  AnimatedBuilder(
+  animation: _glowAnimation,
+  builder: (context, child) {
+    return Container(
+      padding: EdgeInsets.all(6.w), // outer padding for second circle
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 2.w, // outer circle thickness
+        ),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(15.w),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white, width: 4.w), // inner circle
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Color.lerp(
+                Colors.grey.shade400.withOpacity(0.2),
+                Colors.grey.shade400.withOpacity(0.6),
+                _glowAnimation.value,
+              )!,
+              blurRadius: 20.r,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Image.asset(
+          "assets/logo-removebg-preview.png",
+          fit: BoxFit.contain,
+          height: 45.h,
+          width: 40.w,
+        ),
+      ),
+    );
+  },
+),
+
+
+                     // child: Icon(
                           //   Icons.memory,
                           //   size: 32.sp,
                           //   color: Colors.black,
                           // ),
-                        );
-                      },
-                    ),
                     SizedBox(height: 32.h),
 
                     // Title
@@ -348,13 +367,7 @@ class _LoginScreenState extends State<LoginScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: () {
-          //   loginguser();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => HomePage()),
-          );
-        },
+        onPressed: loginguser,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -377,7 +390,9 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildGoogleLoginButton() {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        signInWithGoogle();
+      },
       child: Container(
         height: 50.h,
         width: double.infinity,

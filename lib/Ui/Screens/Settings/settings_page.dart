@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gemini_gpt/Ui/Authentication/Login_screen.dart';
@@ -6,6 +7,7 @@ import 'package:gemini_gpt/Ui/Screens/Settings/Upgrade_to_Pro.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -125,122 +127,124 @@ class SettingsPage extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
     );
   }
-void _showThemeSelectionDialog(
-  BuildContext context,
-  ThemeProvider themeProvider,
-  bool isDarkMode,
-) {
-  ThemeMode tempMode = themeProvider.themeMode;
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24.r),
-            ),
-            title: Text(
-              'Color Scheme',
-              style: GoogleFonts.poppins(
-                color: isDarkMode ? Colors.white : Colors.black,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
+  void _showThemeSelectionDialog(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    bool isDarkMode,
+  ) {
+    ThemeMode tempMode = themeProvider.themeMode;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24.r),
               ),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildThemeOption(
-                    context,
-                    title: 'System (Default)',
-                    themeMode: ThemeMode.system,
-                    currentThemeMode: tempMode,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        setState(() => tempMode = value);
-                      }
-                    },
-                    isDarkMode: isDarkMode,
-                  ),
-                  _buildThemeOption(
-                    context,
-                    title: 'Light',
-                    themeMode: ThemeMode.light,
-                    currentThemeMode: tempMode,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        setState(() => tempMode = value);
-                      }
-                    },
-                    isDarkMode: isDarkMode,
-                  ),
-                  _buildThemeOption(
-                    context,
-                    title: 'Dark',
-                    themeMode: ThemeMode.dark,
-                    currentThemeMode: tempMode,
-                    onChanged: (ThemeMode? value) {
-                      if (value != null) {
-                        setState(() => tempMode = value);
-                      }
-                    },
-                    isDarkMode: isDarkMode,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  themeProvider.setThemeMode(tempMode);
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.poppins(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontSize: 14.sp,
-                  ),
+              title: Text(
+                'Color Scheme',
+                style: GoogleFonts.poppins(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildThemeOption(
+                      context,
+                      title: 'System (Default)',
+                      themeMode: ThemeMode.system,
+                      currentThemeMode: tempMode,
+                      onChanged: (ThemeMode? value) {
+                        if (value != null) {
+                          setState(() => tempMode = value);
+                        }
+                      },
+                      isDarkMode: isDarkMode,
+                    ),
+                    _buildThemeOption(
+                      context,
+                      title: 'Light',
+                      themeMode: ThemeMode.light,
+                      currentThemeMode: tempMode,
+                      onChanged: (ThemeMode? value) {
+                        if (value != null) {
+                          setState(() => tempMode = value);
+                        }
+                      },
+                      isDarkMode: isDarkMode,
+                    ),
+                    _buildThemeOption(
+                      context,
+                      title: 'Dark',
+                      themeMode: ThemeMode.dark,
+                      currentThemeMode: tempMode,
+                      onChanged: (ThemeMode? value) {
+                        if (value != null) {
+                          setState(() => tempMode = value);
+                        }
+                      },
+                      isDarkMode: isDarkMode,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    themeProvider.setThemeMode(tempMode);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'OK',
+                    style: GoogleFonts.poppins(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
-Widget _buildThemeOption(
-  BuildContext context, {
-  required String title,
-  required ThemeMode themeMode,
-  required ThemeMode currentThemeMode,
-  required Function(ThemeMode?) onChanged,
-  required bool isDarkMode,
-}) {
-  return RadioListTile<ThemeMode>(
-    title: Text(
-      title,
-      style: GoogleFonts.poppins(
-        color: isDarkMode ? Colors.white : Colors.black,
-        fontSize: 16.sp,
-        fontWeight: FontWeight.w500,
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String title,
+    required ThemeMode themeMode,
+    required ThemeMode currentThemeMode,
+    required Function(ThemeMode?) onChanged,
+    required bool isDarkMode,
+  }) {
+    return RadioListTile<ThemeMode>(
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          color: isDarkMode ? Colors.white : Colors.black,
+          fontSize: 16.sp,
+          fontWeight: FontWeight.w500,
+        ),
       ),
-    ),
-    value: themeMode,
-    groupValue: currentThemeMode,
-    onChanged: onChanged,
-    activeColor: isDarkMode ? Colors.white : Colors.black,
-    contentPadding: EdgeInsets.zero,
-  );
-}
+      value: themeMode,
+      groupValue: currentThemeMode,
+      onChanged: onChanged,
+      activeColor: isDarkMode ? Colors.white : Colors.black,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
   Widget _buildSettingItem({
     required IconData icon,
     bool isLogout = false,
@@ -354,11 +358,16 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
                   ),
                   SizedBox(height: 12.h),
                   TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
+                    onPressed: () async {
+                      _logout(context);
+                      // await FirebaseAuth.instance.signOut();
+                      // Navigator.pushAndRemoveUntil(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) => const LoginScreen(),
+                      //   ),
+                      //   (route) => false,
+                      // );
                     },
                     child: Icon(
                       Icons.logout,
@@ -373,5 +382,17 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
         ),
       );
     },
+  );
+}
+
+Future<void> _logout(BuildContext context) async {
+  await FirebaseAuth.instance.signOut();
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('isLoggedIn', false);
+
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (context) => const LoginScreen()),
+    (route) => false,
   );
 }
