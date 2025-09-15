@@ -3,8 +3,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services") // Add Google Services plugin here
-}
+id("com.google.gms.google-services") }
+
+
 
 android {
     namespace = "com.example.gemini_gpt"
@@ -39,8 +40,9 @@ android {
 
 dependencies {
     // Kotlin DSL syntax: use double quotes and parentheses
-    implementation("com.google.firebase:firebase-analytics-ktx:21.4.0")
+   implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+implementation("com.google.firebase:firebase-analytics")
 }
 
 flutter {

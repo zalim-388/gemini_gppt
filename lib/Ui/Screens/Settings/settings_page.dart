@@ -6,6 +6,7 @@ import 'package:gemini_gpt/Ui/Screens/Settings/About_page.dart';
 import 'package:gemini_gpt/Ui/Screens/Settings/Upgrade_to_Pro.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -382,6 +383,11 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
 
 Future<void> _logout(BuildContext context) async {
   await FirebaseAuth.instance.signOut();
+
+  final GoogleSignIn googleSignIn = GoogleSignIn();
+  await googleSignIn.signOut();
+  await googleSignIn.disconnect();
+
   SharedPreferences prefs = await SharedPreferences.getInstance();
   await prefs.setBool('isLoggedIn', false);
 
@@ -431,12 +437,6 @@ Widget _builduser(bool isDarkMode, BuildContext context) {
               fontWeight: FontWeight.w500,
             ),
           ),
-        ),
-
-        Icon(
-          Icons.keyboard_arrow_down,
-          color: isDarkMode ? Colors.white : Colors.black,
-          size: 20.sp,
         ),
       ],
     ),

@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "822927120312",
+    "project_id": "geminigpt-54461",
+    "storage_bucket": "geminigpt-54461.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822927120312:android:7a3e43ec337e90d982a14d",
+        "android_client_info": {
+          "package_name": "com.example.gemini_gpt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "822927120312-591k03kb5lsa3vtfb0sh0sphblcdem38.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.gemini_gpt",
+            "certificate_hash": "cfe27bc8bb9c5c9c126d7c5eb577353da5d2d74f"
+          }
+        },
+        {
+          "client_id": "822927120312-2udtjsnbibojnmsqpspfe08a4dvpr9gj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmZHcaYOUM50R_J3vMpJK8t1RA7ejj5Vw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "822927120312-2udtjsnbibojnmsqpspfe08a4dvpr9gj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "822927120312-ab5943q8d1amnlm3pn7eldph0t19dejl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.geminigpt"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822927120312:android:e98c3412566407d082a14d",
+        "android_client_info": {
+          "package_name": "com.mycompany.geminigpt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "822927120312-6nl8tadr7eduj7ck2jk38kd54sjqngbs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mycompany.geminigpt",
+            "certificate_hash": "cfe27bc8bb9c5c9c126d7c5eb577353da5d2d74f"
+          }
+        },
+        {
+          "client_id": "822927120312-2udtjsnbibojnmsqpspfe08a4dvpr9gj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmZHcaYOUM50R_J3vMpJK8t1RA7ejj5Vw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "822927120312-2udtjsnbibojnmsqpspfe08a4dvpr9gj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "822927120312-ab5943q8d1amnlm3pn7eldph0t19dejl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.geminigpt"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

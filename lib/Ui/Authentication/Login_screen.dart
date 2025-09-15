@@ -1,10 +1,10 @@
-// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:gemini_gpt/Ui/Screens/home_page.dart';
 import 'package:gemini_gpt/Ui/Service/Auth_service.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -24,75 +24,180 @@ class _LoginScreenState extends State<LoginScreen>
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
   bool _isLoading = false;
+  bool _isLogin = true; // Toggle between login and register
+  final _formKey = GlobalKey<FormState>();
 
-  Future<void> loginguser() async {
-    try {
-   UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-  email: _emailController.text.trim(),
-  password: _passwordController.text.trim(),
-);
-print("Login email: '${_emailController.text}'");
-print("Login password: '${_passwordController.text}'");
+  Future<void> _submitAuthForm() async {
+    if (!_formKey.currentState!.validate()) return;
 
-
-
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-
-      User? user = userCredential.user;
-      if (user != null) {
-        if (user.emailVerified) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomePage()),
-          );
-        }
-      }
-} on FirebaseAuthException catch (e) {
-  if (e.code == 'invalid-credential') {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Invalid email or password. Please try again.')),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: ${e.message}')),
-    );
-  }
-}
-
-  }
-
-  Future<void> signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      final UserCredential = await _authService.signInWithGoogle();
-      final user = UserCredential?.user;
-      if (user != null && mounted) {
-        setState(() {
-          _passwordController.text = user.email ?? "";
-          _emailController.text = user.email ?? "";
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomePage()),
-          );
-        });
+      UserCredential userCredential;
+
+      if (_isLogin) {
+        // LOGIN
+        userCredential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Login successful!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+      } else {
+        // REGISTER
+        userCredential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        User? user = userCredential.user;
+        if (user != null) {
+          await user.sendEmailVerification();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Account created successfully!"),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+
+            // After successful registration, switch to login mode
+            setState(() {
+              _isLogin = true;
+              _emailController.clear();
+              _passwordController.clear();
+            });
+          }
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = "Something went wrong";
+
+      switch (e.code) {
+        case 'user-not-found':
+          message = "No user found for this email.";
+          break;
+        case 'wrong-password':
+          message = "Incorrect password.";
+          break;
+        case 'email-already-in-use':
+          message = "This email is already registered.";
+          break;
+        case 'weak-password':
+          message = "Password is too weak.";
+          break;
+        case 'invalid-email':
+          message = "Invalid email address.";
+          break;
+        case 'invalid-credential':
+          message =
+              "Invalid credentials. Please check your email and password.";
+          break;
+        case 'too-many-requests':
+          message = "Too many attempts. Please try again later.";
+          break;
+        case 'network-request-failed':
+          message = "Network error. Please check your internet connection.";
+          break;
+        default:
+          message = "Authentication failed: ${e.message}";
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
       }
     } catch (e) {
       if (mounted) {
-        print("Error in google sign in $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Unexpected error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+
+    
+      await googleSignIn.signOut();
+      await googleSignIn.disconnect();
+
+      // Open Google account chooser
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return; 
       }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+
+      if (mounted) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Google sign-in successful!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error in google sign in $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Google sign-in failed: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -127,181 +232,274 @@ print("Login password: '${_passwordController.text}'");
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/screen.png'),
             fit: BoxFit.cover,
           ),
-
-          // gradient: LinearGradient(
-          //   begin: Alignment.topCenter,
-          //   end: Alignment.bottomCenter,
-          //   colors: [
-          //     Colors.white,
-          //     Colors.black87,
-          //   ],
-          // ),
         ),
         child: SafeArea(
           child: Center(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 22.w),
               child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _glowAnimation,
-                      builder: (context, child) {
-                        return Container(
-                          padding: EdgeInsets.all(
-                            6.w,
-                          ), // outer padding for second circle
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2.w, // outer circle thickness
-                            ),
-                          ),
-                          child: Container(
-                            padding: EdgeInsets.all(15.w),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Logo with animation
+                      AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            padding: EdgeInsets.all(6.w),
                             decoration: BoxDecoration(
+                              shape: BoxShape.circle,
                               border: Border.all(
                                 color: Colors.white,
-                                width: 4.w,
-                              ), // inner circle
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      Color.lerp(
-                                        Colors.grey.shade400.withOpacity(0.2),
-                                        Colors.grey.shade400.withOpacity(0.6),
-                                        _glowAnimation.value,
-                                      )!,
-                                  blurRadius: 20.r,
-                                  spreadRadius: 2,
+                                width: 2.w,
+                              ),
+                            ),
+                            child: Container(
+                              padding: EdgeInsets.all(15.w),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4.w,
                                 ),
-                              ],
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        Color.lerp(
+                                          Colors.grey.shade400.withOpacity(0.2),
+                                          Colors.grey.shade400.withOpacity(0.6),
+                                          _glowAnimation.value,
+                                        )!,
+                                    blurRadius: 20.r,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                "assets/logo-removebg-preview.png",
+                                fit: BoxFit.contain,
+                                height: 45.h,
+                                width: 40.w,
+                              ),
                             ),
-                            child: Image.asset(
-                              "assets/logo-removebg-preview.png",
-                              fit: BoxFit.contain,
-                              height: 45.h,
-                              width: 40.w,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // child: Icon(
-                    //   Icons.memory,
-                    //   size: 32.sp,
-                    //   color: Colors.black,
-                    // ),
-                    SizedBox(height: 32.h),
-
-                    // Title
-                    Text(
-                      'Gemini GPT',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-
-                    SizedBox(height: 32.h),
-
-                    // Email Field
-                    _buildInputField(
-                      controller: _emailController,
-                      focusNode: _emailFocusNode,
-                      hintText: 'Email',
-                      keyboardType: TextInputType.emailAddress,
-                      icon: Icons.email_outlined,
-                    ),
-
-                    SizedBox(height: 16.h),
-
-                    // Password Field
-                    _buildInputField(
-                      controller: _passwordController,
-                      focusNode: _passwordFocusNode,
-                      hintText: 'Password',
-                      isPassword: true,
-                      icon: Icons.lock_outline,
-                    ),
-
-                    SizedBox(height: 16.h),
-
-                    // Forgot Password Link
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // Handle forgot password
+                          );
                         },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: const Color(0xFF757575),
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      ),
+
+                      SizedBox(height: 32.h),
+
+                      // Title
+                      Text(
+                        'Gemini GPT',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                    ),
 
-                    SizedBox(height: 24.h),
+                      SizedBox(height: 16.h),
 
-                    // Login Button
-                    _buildGlowingButton(),
+                      // Login/Register Toggle
+                      Text(
+                        _isLogin ? 'Welcome Back!' : 'Create Account',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
 
-                    SizedBox(height: 24.h),
+                      SizedBox(height: 32.h),
 
-                    // OR Divider
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 1.h,
-                            color: Colors.grey[300],
+                      // Email Field
+                      _buildInputField(
+                        controller: _emailController,
+                        focusNode: _emailFocusNode,
+                        hintText: "Enter your email",
+                        keyboardType: TextInputType.emailAddress,
+                        icon: Icons.email,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Email is required";
+                          }
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                            return "Enter a valid email";
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 16.h),
+
+                      // Password Field
+                      _buildInputField(
+                        controller: _passwordController,
+                        focusNode: _passwordFocusNode,
+                        hintText: "Enter your password",
+                        isPassword: true,
+                        icon: Icons.lock,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Password is required";
+                          }
+                          if (value.length < 6) {
+                            return "Password must be at least 6 characters";
+                          }
+                          return null;
+                        },
+                      ),
+
+                      SizedBox(height: 16.h),
+
+                      // Forgot Password Link (only show during login)
+                      if (_isLogin)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () async {
+                              if (_emailController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please enter your email first",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              try {
+                                await _auth.sendPasswordResetEmail(
+                                  email: _emailController.text.trim(),
+                                );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Password reset email sent!",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Error: ${e.toString()}"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                color: const Color(0xFF757575),
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Text(
-                            'OR',
+
+                      SizedBox(height: 24.h),
+
+                      // Login/Register Button
+                      _buildGlowingButton(
+                        onPressed: _submitAuthForm,
+                        isLoading: _isLoading,
+                        buttonText: _isLogin ? 'Login' : 'Register',
+                      ),
+
+                      SizedBox(height: 16.h),
+
+                      // Toggle between Login/Register
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isLogin
+                                ? "Don't have an account? "
+                                : "Already have an account? ",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Colors.black87,
                               fontSize: 14.sp,
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            height: 1.h,
-                            color: Colors.grey[300],
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isLogin = !_isLogin;
+                                // Clear form when switching
+                                _emailController.clear();
+                                _passwordController.clear();
+                              });
+                            },
+                            child: Text(
+                              _isLogin ? "Register" : "Login",
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
 
-                    SizedBox(height: 24.h),
+                      SizedBox(height: 24.h),
 
-                    // Google Login Button
-                    _buildGoogleLoginButton(),
-                  ],
+                      // OR Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1.h,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1.h,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 24.h),
+
+                      // Google Login Button
+                      _buildGoogleLoginButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -318,23 +516,22 @@ print("Login password: '${_passwordController.text}'");
     TextInputType keyboardType = TextInputType.text,
     bool isPassword = false,
     required IconData icon,
+    required String? Function(String?) validator,
   }) {
-    return Container(
+    return SizedBox(
       height: 55.h,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.white),
-      ),
-      child: TextField(
+
+      child: TextFormField(
         cursorColor: Colors.black,
         controller: controller,
         focusNode: focusNode,
         keyboardType: keyboardType,
         obscureText: isPassword && !_isPasswordVisible,
         style: TextStyle(fontSize: 16.sp, color: Colors.black),
+        validator: validator,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: Colors.black, fontSize: 16.sp),
+          hintStyle: TextStyle(color: Colors.black54, fontSize: 16.sp),
           prefixIcon: Icon(icon, color: Colors.black, size: 20.sp),
           contentPadding: EdgeInsets.symmetric(
             horizontal: 16.w,
@@ -356,20 +553,33 @@ print("Login password: '${_passwordController.text}'");
                     ),
                   )
                   : null,
-          border: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          enabledBorder: InputBorder.none,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.white, width: 1.w),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.white, width: 1.w),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.white, width: 1.w),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildGlowingButton() {
+  Widget _buildGlowingButton({
+    required VoidCallback onPressed,
+    required String buttonText,
+    bool isLoading = false,
+  }) {
     return Container(
       height: 50.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
-        gradient: LinearGradient(colors: [Colors.black, Colors.grey]),
+        gradient: const LinearGradient(colors: [Colors.black, Colors.grey]),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -384,7 +594,7 @@ print("Login password: '${_passwordController.text}'");
         ],
       ),
       child: ElevatedButton(
-        onPressed: loginguser,
+        onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -392,24 +602,32 @@ print("Login password: '${_passwordController.text}'");
             borderRadius: BorderRadius.circular(12.r),
           ),
         ),
-        child: Text(
-          'Login',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
+        child:
+            isLoading
+                ? SizedBox(
+                  height: 20.h,
+                  width: 20.h,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.w,
+                  ),
+                )
+                : Text(
+                  buttonText,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
       ),
     );
   }
 
   Widget _buildGoogleLoginButton() {
     return GestureDetector(
-      onTap: () {
-        signInWithGoogle();
-      },
+      onTap: _isLoading ? null : signInWithGoogle,
       child: Container(
         height: 50.h,
         width: double.infinity,
@@ -430,7 +648,6 @@ print("Login password: '${_passwordController.text}'");
             ),
           ],
         ),
-
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -443,8 +660,8 @@ print("Login password: '${_passwordController.text}'");
             ),
             SizedBox(width: 8.w),
             Text(
-              textAlign: TextAlign.center,
               'Continue with Google',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
