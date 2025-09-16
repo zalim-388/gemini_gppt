@@ -82,3 +82,8 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
+// flutter clean
+// flutter pub get
+// flutter run

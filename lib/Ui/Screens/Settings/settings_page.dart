@@ -382,20 +382,29 @@ void _showLogoutDialog(BuildContext context, bool isDarkMode) {
 }
 
 Future<void> _logout(BuildContext context) async {
-  await FirebaseAuth.instance.signOut();
+  try {
+    await FirebaseAuth.instance.signOut();
 
-  final GoogleSignIn googleSignIn = GoogleSignIn();
-  await googleSignIn.signOut();
-  await googleSignIn.disconnect();
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    try {
+      await googleSignIn.disconnect();
+    } catch (e) {
+      debugPrint("Google disconnect error: $e");
+    }
 
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('isLoggedIn', false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => const LoginScreen()),
-    (route) => false,
-  );
+    if (context.mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  } catch (e) {
+    debugPrint("Logout error: $e");
+  }
 }
 
 Widget _builduser(bool isDarkMode, BuildContext context) {
@@ -414,6 +423,8 @@ Widget _builduser(bool isDarkMode, BuildContext context) {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        SizedBox(width: 7.w),
+
         CircleAvatar(
           radius: 16.r,
           backgroundColor: isDarkMode ? Colors.white30 : Colors.black,
@@ -422,7 +433,7 @@ Widget _builduser(bool isDarkMode, BuildContext context) {
             style: TextStyle(color: Colors.white, fontSize: 16.sp),
           ),
         ),
-        SizedBox(width: 10),
+        SizedBox(width: 10.w),
 
         // User Name / Email
         Expanded(

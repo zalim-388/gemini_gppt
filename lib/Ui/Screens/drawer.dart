@@ -35,8 +35,7 @@ class _CustomDrawerState extends State<CustomDrawer>
     with TickerProviderStateMixin {
   late AnimationController _drawerAnimationController;
   final TextEditingController _searchController = TextEditingController();
-  late Animation<double> _drawerAnimation;
-  String _selectedChatId = '1';
+
   List<ChatConversation> _filteredConversations = [];
   String _searchQuery = '';
 
@@ -47,10 +46,7 @@ class _CustomDrawerState extends State<CustomDrawer>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _drawerAnimation = CurvedAnimation(
-      parent: _drawerAnimationController,
-      curve: Curves.easeInOut,
-    );
+
     _filteredConversations = widget.conversation;
   }
 
@@ -577,11 +573,7 @@ class _CustomDrawerState extends State<CustomDrawer>
 
             child: Text(
               firstLetter,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16.sp,
-              
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 16.sp),
             ),
           ),
           SizedBox(width: 10.w),

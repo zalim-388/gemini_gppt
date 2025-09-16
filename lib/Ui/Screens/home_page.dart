@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -24,12 +25,37 @@ class _HomePageState extends State<HomePage> {
   List<ChatConversation> _conversations = [];
   String? _activeConversationId;
   ChatConversation? _activeConversation;
-  bool _isLodingHistory = true;
+  bool _isLoadingHistory = true;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    if (_currentUser != null) {
+      _loadChatHistory();
+    } else {
+      setState(() {
+        _isLoadingHistory = false;
+      });
+    }
+
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+        if (user != null) {
+          _loadChatHistory();
+        } else {
+          setState(() {
+            _conversations = [];
+            _activeConversation = null;
+            _activeConversationId = null;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -40,43 +66,74 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadChatHistory() async {
+    if (_currentUser == null) return;
+
+    setState(() {
+      _isLoadingHistory = true;
+    });
+
     try {
-      final conversations = await ChatHistoryService.loadConversations();
-      final activeId = await ChatHistoryService.loadActiveConversationId();
+      final conversations = await ChatHistoryService.loadUserConversations(
+        _currentUser!.uid,
+      );
+      final activeId = await ChatHistoryService.loadUserActiveConversationId(
+        _currentUser!.uid,
+      );
 
       setState(() {
         _conversations = conversations;
-        _activeConversationId = activeId ?? conversations.first.id;
-        _activeConversation = conversations.firstWhere(
-          (conv) => conv.id == _activeConversationId,
-          orElse: () => conversations.first,
-        );
-        _isLodingHistory = false;
+        if (conversations.isNotEmpty) {
+          _activeConversationId = activeId ?? conversations.first.id;
+          _activeConversation = conversations.firstWhere(
+            (conv) => conv.id == _activeConversationId,
+            orElse: () => conversations.first,
+          );
+        } else {
+          _activeConversationId = null;
+          _activeConversation = ChatConversation(
+            id: DateTime.now().toString(),
+            messages: [],
+            title: '',
+            userId: '',
+          ); // Ensure empty messages
+        }
+        _isLoadingHistory = false;
       });
     } catch (e) {
-      print("Error loading chat history $e");
+      print("Error loading chat history: $e");
       setState(() {
-        _isLodingHistory = false;
+        _isLoadingHistory = false;
       });
     }
   }
 
   Future<void> createNewConversation() async {
-    final newconversation = await ChatHistoryService.createNewConversation();
+    if (_currentUser == null) return;
+
+    final newConversation = await ChatHistoryService.createNewUserConversation(
+      _currentUser!.uid,
+    );
     setState(() {
       for (var conv in _conversations) {
         conv.isActive = false;
       }
-
-      _conversations.insert(0, newconversation);
-      _activeConversationId = newconversation.id;
-      _activeConversation = newconversation;
+      _conversations.insert(0, newConversation);
+      _activeConversationId = newConversation.id;
+      _activeConversation = newConversation;
     });
-    await ChatHistoryService.saveConversations(_conversations);
-    await ChatHistoryService.saveActiveConversationId(newconversation.id);
+    await ChatHistoryService.saveUserConversations(
+      _currentUser!.uid,
+      _conversations,
+    );
+    await ChatHistoryService.saveUserActiveConversationId(
+      _currentUser!.uid,
+      newConversation.id,
+    );
   }
 
-  Future<void> swichConversation(String conversationId) async {
+  Future<void> switchConversation(String conversationId) async {
+    if (_currentUser == null) return;
+
     setState(() {
       for (var conv in _conversations) {
         conv.isActive = conv.id == conversationId;
@@ -86,16 +143,28 @@ class _HomePageState extends State<HomePage> {
         (conv) => conv.id == conversationId,
       );
     });
-    await ChatHistoryService.saveActiveConversationId(conversationId);
-    await ChatHistoryService.saveConversations(_conversations);
+    await ChatHistoryService.saveUserActiveConversationId(
+      _currentUser!.uid,
+      conversationId,
+    );
+    await ChatHistoryService.saveUserConversations(
+      _currentUser!.uid,
+      _conversations,
+    );
   }
 
   Future<void> deleteConversation(String conversationId) async {
-    await ChatHistoryService.deleteConversation(conversationId, _conversations);
+    if (_currentUser == null) return;
+
+    await ChatHistoryService.deleteUserConversation(
+      _currentUser!.uid,
+      conversationId,
+      _conversations,
+    );
 
     if (_activeConversationId == conversationId) {
       if (_conversations.isNotEmpty) {
-        await swichConversation(_conversations.first.id);
+        await switchConversation(_conversations.first.id);
       } else {
         await createNewConversation();
       }
@@ -106,7 +175,10 @@ class _HomePageState extends State<HomePage> {
     String conversationId,
     String newTitle,
   ) async {
-    await ChatHistoryService.updateConversationTitle(
+    if (_currentUser == null) return;
+
+    await ChatHistoryService.updateUserConversationTitle(
+      _currentUser!.uid,
       conversationId,
       newTitle,
       _conversations,
@@ -121,10 +193,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _sendMessage() async {
-    final inputMessage = _controller.text.trim();
-    if (inputMessage.isEmpty || _activeConversation == null) return;
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please log in to send messages"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    // Check if this is the first message BEFORE adding the user message
+    final inputMessage = _controller.text.trim();
+    if (inputMessage.isEmpty) return;
+
+    if (_activeConversation == null) {
+      await createNewConversation();
+    }
+
+    if (_activeConversation == null) return;
+
     final isFirstMessage = _activeConversation!.messages.isEmpty;
 
     final userMessage = ChatMessage(
@@ -137,20 +224,12 @@ class _HomePageState extends State<HomePage> {
       _activeConversation?.messages.add(userMessage);
     });
 
-    // Generate title only for the first message
     if (isFirstMessage) {
       final newTitle = ChatHistoryService.generateConversationTitle(
         inputMessage,
       );
       _activeConversation?.title = newTitle;
     }
-
-    // // Save the user message to conversation
-    // await ChatHistoryService.saveMessageToConversation(
-    //   _activeConversation!.id,
-    //   userMessage,
-    //   _conversations,
-    // );
 
     BlocProvider.of<GeminiGptBloc>(
       context,
@@ -177,6 +256,28 @@ class _HomePageState extends State<HomePage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
     final theme = Theme.of(context);
+
+    if (_currentUser == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                "Please log in to continue",
+                style: GoogleFonts.poppins(
+                  fontSize: 16.sp,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -222,7 +323,7 @@ class _HomePageState extends State<HomePage> {
       drawer: CustomDrawer(
         conversation: _conversations,
         activeConversationId: _activeConversationId,
-        onConversationSelected: swichConversation,
+        onConversationSelected: switchConversation,
         onConversationDeleted: deleteConversation,
         onConversationRenamed: renameConversation,
         onNewConversation: createNewConversation,
@@ -235,7 +336,8 @@ class _HomePageState extends State<HomePage> {
                 BlocListener<GeminiGptBloc, GeminiGptState>(
                   listener: (context, state) async {
                     if (state is GeminiGptBlocLoaded &&
-                        _activeConversation != null) {
+                        _activeConversation != null &&
+                        _currentUser != null) {
                       final botMessage = ChatMessage(
                         id: 'Msg${DateTime.now().microsecondsSinceEpoch}_bot',
                         type: 'bot',
@@ -244,13 +346,6 @@ class _HomePageState extends State<HomePage> {
                       setState(() {
                         _activeConversation?.messages.add(botMessage);
                       });
-
-                      // await ChatHistoryService.saveMessageToConversation(
-                      //   _activeConversation!.id,
-                      //   botMessage,
-                      //   _conversations,
-                      // );
-
                       _scrollToBottom();
                     } else if (state is GeminiGptBlocError) {
                       final lastMessage =
@@ -269,13 +364,6 @@ class _HomePageState extends State<HomePage> {
                         setState(() {
                           _activeConversation?.messages.add(errorMessage);
                         });
-
-                        await ChatHistoryService.saveMessageToConversation(
-                          _activeConversation!.id,
-                          errorMessage,
-                          _conversations,
-                        );
-
                         _scrollToBottom();
                       }
                     }
@@ -284,8 +372,12 @@ class _HomePageState extends State<HomePage> {
               ],
               child: BlocBuilder<GeminiGptBloc, GeminiGptState>(
                 builder: (context, state) {
-                  final _messages = _activeConversation?.messages ?? [];
-                  return _messages.isEmpty
+                  if (_isLoadingHistory) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  final messages = _activeConversation?.messages ?? [];
+                  return messages.isEmpty
                       ? Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -323,18 +415,16 @@ class _HomePageState extends State<HomePage> {
                         controller: _scrollController,
                         padding: EdgeInsets.all(16.w),
                         itemCount:
-                            _messages.length +
+                            messages.length +
                             (state is GeminiGptBlocLoading ? 1 : 0),
                         itemBuilder: (context, index) {
-                          if (index == _messages.length &&
+                          if (index == messages.length &&
                               state is GeminiGptBlocLoading) {
                             return _buildLoadingMessage(isDarkMode);
                           }
-
-                          final message = _messages[index];
+                          final message = messages[index];
                           final isUser = message.type == 'user';
                           final isError = message.type == 'error';
-
                           return _buildMessageBubble(
                             message.message,
                             isUser,
@@ -445,13 +535,16 @@ class _HomePageState extends State<HomePage> {
             controller: _controller,
             maxLines: null,
             textInputAction: TextInputAction.send,
-            // onSubmitted: (_) => isLoading ? null : _sendMessage(),
+            onSubmitted: (_) => isLoading ? null : _sendMessage(),
             style: GoogleFonts.poppins(
               color: isDarkMode ? Colors.white : Colors.black,
               fontSize: 16.sp,
             ),
             decoration: InputDecoration(
-              hintText: "Ask anything...",
+              hintText:
+                  _currentUser != null
+                      ? "Ask anything..."
+                      : "Please log in to chat",
               hintStyle: GoogleFonts.poppins(
                 color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                 fontSize: 16.sp,
@@ -482,7 +575,8 @@ class _HomePageState extends State<HomePage> {
                     color:
                         isLoading
                             ? (isDarkMode ? Colors.grey.shade700 : Colors.black)
-                            : (_controller.text.trim().isEmpty
+                            : (_controller.text.trim().isEmpty ||
+                                    _currentUser == null
                                 ? Colors.grey.shade400
                                 : (isDarkMode
                                     ? Colors.white
@@ -504,10 +598,11 @@ class _HomePageState extends State<HomePage> {
                             )
                             : Icon(
                               Icons.arrow_upward,
-                              color: (isDarkMode ? Colors.black : Colors.white),
+                              color: isDarkMode ? Colors.black : Colors.white,
                               size: 20.sp,
                             ),
-                    onPressed: isLoading ? null : _sendMessage,
+                    onPressed:
+                        isLoading || _currentUser == null ? null : _sendMessage,
                   ),
                 ),
               ),
@@ -515,6 +610,7 @@ class _HomePageState extends State<HomePage> {
             onChanged: (value) {
               setState(() {});
             },
+            enabled: _currentUser != null,
           );
         },
       ),

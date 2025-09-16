@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:gemini_gpt/Ui/Screens/home_page.dart';
 import 'package:gemini_gpt/Ui/Service/Auth_service.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -142,60 +142,23 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   Future<void> signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
-
-    
-      await googleSignIn.signOut();
-      await googleSignIn.disconnect();
-
-      // Open Google account chooser
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        setState(() => _isLoading = false);
-        return; 
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      if (mounted) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Google sign-in successful!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-
+      final userCredential = await _authService.signInWithGoogle();
+      if (userCredential != null && mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
       }
     } catch (e) {
-      debugPrint("Error in google sign in $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Google sign-in failed: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Google sign-in failed: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -455,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen>
                             child: Text(
                               _isLogin ? "Register" : "Login",
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: Colors.black87,
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,
                               ),
