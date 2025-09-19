@@ -89,6 +89,7 @@ class ChatDBHelper {
   static final ChatDBHelper instance = ChatDBHelper._();
   //DATA BASE TABLE
   static const String TABLE_CONVARSTION = "Converstion";
+  static const String TABLE_MESSAGES = "messages";
 
   static const String CONV_ID = 'id';
   static const String CONV_TITLE = 'title';
@@ -97,9 +98,15 @@ class ChatDBHelper {
   static const String CONV_IS_ACTIVE = "is_active";
   static const String CONV_CREATED_AT = "created_at";
 
+  static const String MSG_ID = "id";
+  static const String MSG_TYPE = "type";
+  static const String MSG_MESSAGE = "message";
+  static const String MSG_CONVERSATION_ID = "conversation_id";
+  static const String MSG_TIMESTAMP = "timestamp";
+
   Database? mychatDB;
 
-  Future<Database> getchatDB() async {
+  Future<Database> get database async {
     if (mychatDB != null) {
       return mychatDB!;
     } else {
@@ -126,6 +133,18 @@ class ChatDBHelper {
           "$CONV_IS_ACTIVE INTEGER,"
           "$CONV_CREATED_AT TEXT)",
         );
+
+        await db.execute('''
+          CREATE TABLE $TABLE_MESSAGES (
+            $MSG_ID TEXT PRIMARY KEY,
+            $MSG_TYPE TEXT NOT NULL,
+            $MSG_MESSAGE TEXT NOT NULL,
+            $MSG_CONVERSATION_ID TEXT NOT NULL,
+            $MSG_TIMESTAMP INTEGER NOT NULL,
+            FOREIGN KEY ($MSG_CONVERSATION_ID) REFERENCES $TABLE_CONVARSTION ($CONV_ID) ON DELETE CASCADE
+          )
+        ''');
+
         print("Chat history database initialized");
       },
     );
@@ -185,7 +204,7 @@ class ChatDBHelper {
   //   }
 
   static Future<ChatConversation> createNewConversation() async {
-    final db=  await data
+    final db = await data;
     final newConversation = ChatConversation(
       id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
       title: 'New Chat',
@@ -193,7 +212,7 @@ class ChatDBHelper {
       userId: 'legacy',
       isActive: true,
     );
-    await db.
+    await db.insert(TABLE_CONVARSTION, newConversation.toMap());
     return newConversation;
   }
 
