@@ -1,34 +1,42 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ChatMessage {
   final String id;
   final String type;
   final String message;
+  final conversationId;
   final DateTime timestamp;
 
   ChatMessage({
     required this.id,
     required this.type,
     required this.message,
+    required this.conversationId,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'type': type,
       'message': message,
+      "conversation_Id": conversationId,
       'timestamp': timestamp.toIso8601String(),
     };
   }
 
-  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+  factory ChatMessage.fromMap(Map<String, dynamic> Map) {
     return ChatMessage(
-      id: json['id'],
-      type: json['type'],
-      message: json['message'],
-      timestamp: DateTime.parse(json['timestamp']),
+      id: Map['id'],
+      type: Map['type'],
+      message: Map['message'],
+      conversationId: Map['conversation_Id'],
+      timestamp: DateTime.parse(Map['timestamp']),
     );
   }
 }
@@ -36,10 +44,10 @@ class ChatMessage {
 class ChatConversation {
   final String id;
   String title;
-  final List<ChatMessage> messages;
   bool isActive;
+  final List<ChatMessage> messages;
   final DateTime createdAt;
-  final String userId; // Add userId to track conversation owner
+  final String userId;
 
   ChatConversation({
     required this.id,
@@ -50,48 +58,166 @@ class ChatConversation {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
-      'messages': messages.map((msg) => msg.toJson()).toList(),
       'isActive': isActive,
+      'messages': messages.map((msg) => msg.toMap()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'userId': userId,
     };
   }
 
-  factory ChatConversation.fromJson(Map<String, dynamic> json) {
+  factory ChatConversation.fromMap(Map<String, dynamic> json) {
     return ChatConversation(
       id: json['id'],
       title: json['title'],
       userId: json['userId'],
-      messages: (json['messages'] as List<dynamic>)
-          .map((msgJson) => ChatMessage.fromJson(msgJson))
-          .toList(),
+      messages:
+          (json['messages'] as List<dynamic>)
+              .map((msgJson) => ChatMessage.fromMap(msgJson))
+              .toList(),
       isActive: json['isActive'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
 }
 
-class ChatHistoryService {
-  static const String _conversationsKey = 'chat_conversations';
-  static const String _activeConversationKey = 'active_conversation_id';
+class ChatDBHelper {
+  ChatDBHelper._();
+  static final ChatDBHelper instance = ChatDBHelper._();
+  //DATA BASE TABLE
+  static const String TABLE_CONVARSTION = "Converstion";
 
-  // User-specific keys
-  static String _getUserConversationsKey(String userId) => 'user_${userId}_conversations';
-  static String _getUserActiveConversationKey(String userId) => 'user_${userId}_active_conversation';
+  static const String CONV_ID = 'id';
+  static const String CONV_TITLE = 'title';
+  static const String CONV_MESSAGES = 'messages';
+  static const String CONV_USER_ID = "userid";
+  static const String CONV_IS_ACTIVE = "is_active";
+  static const String CONV_CREATED_AT = "created_at";
 
-  // Legacy methods (keep for backward compatibility)
+  Database? mychatDB;
+
+  Future<Database> getchatDB() async {
+    if (mychatDB != null) {
+      return mychatDB!;
+    } else {
+      mychatDB = await openchatDB();
+      return mychatDB!;
+    }
+  }
+
+  //initialize database
+  Future<Database> openchatDB() async {
+    Directory appDir = await getApplicationDocumentsDirectory();
+    String dbpath = join(appDir.path, "chatDB.db");
+    return await openDatabase(
+      dbpath,
+      version: 1,
+
+      onCreate: (db, version) async {
+        await db.execute(
+          "CREATE TABLE$TABLE_CONVARSTION("
+          "$CONV_ID TEXT PRIMARY KEY,"
+          "$CONV_TITLE TEXT,"
+          "$CONV_MESSAGES TEXT,"
+          "$CONV_USER_ID TEXT,"
+          "$CONV_IS_ACTIVE INTEGER,"
+          "$CONV_CREATED_AT TEXT)",
+        );
+        print("Chat history database initialized");
+      },
+    );
+  }
+
+  // Future<bool> addmessage(ChatMessage ChatMessage) async {
+  //   try {
+  //     var db = await getchatDB();
+  //     int rowsEffected = await db.insert(TABLE_CONVARSTION, {
+  //       COLUMN_MESSAGE: ChatMessage.message,
+  //       COLUMN_TYPE: ChatMessage.type,
+  //     });
+  //     return rowsEffected > 0;
+  //   } catch (e) {
+  //     print('Error adding message to database: $e');
+  //     return false;
+  //   }
+
+  // }
+
+  // Future<List<ChatMessage>> getAllMessage() async {
+  //   try {
+  //     var db = await getchatDB();
+  //     List<Map<String, dynamic>> result = await db.query(TABLE_CHAT_HISTORY);
+  //     return result.map((map) => ChatMessage.fromJson(map)).toList();
+  //   } catch (e) {
+  //     print('Error getting messages from database: $e');
+  //     return [];
+  //   }
+  // }
+
+  //   Future<List<ChatMessage>> getAllMessagetype(String type) async {
+  //     try {
+  //       var db = await getchatDB();
+  //       List<Map<String, dynamic>> result = await db.query(
+  //         TABLE_CHAT_HISTORY,
+  //         where: '$COLUMN_TYPE = ?',
+  //         whereArgs: [type],
+  //       );
+
+  //       return result.map((map) => ChatMessage.fromJson(map)).toList();
+  //     } catch (e) {
+  //       print('Error getting messages type from database: $e');
+  //       return [];
+  //     }
+  //   }
+
+  //   Future<bool> updateUserConversationTitle({
+  //     required int userId,
+  //     required String newTitle,
+  //     required List<ChatConversation> conversations,
+  //   }) async {
+  // var db =await getchatDB();
+  // int rowsEffected= await db.update(TABLE_CHAT_HISTORY, {
+  //   COLUMN_MESSAGE: newTitle})
+
+  //   }
+
+  static Future<ChatConversation> createNewConversation() async {
+    final db=  await data
+    final newConversation = ChatConversation(
+      id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
+      title: 'New Chat',
+      messages: [],
+      userId: 'legacy',
+      isActive: true,
+    );
+    await db.
+    return newConversation;
+  }
+
+  static Future<ChatConversation> createNewUserConversation(
+    String userId,
+  ) async {
+    final newConversation = ChatConversation(
+      id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
+      title: 'New Chat',
+      messages: [],
+      userId: userId,
+      isActive: true,
+    );
+    return newConversation;
+  }
+
   static Future<List<ChatConversation>> loadConversations() async {
     final prefs = await SharedPreferences.getInstance();
     final conversationsJson = prefs.getString(_conversationsKey);
-    
+
     if (conversationsJson == null) {
       return [];
     }
-    
+
     try {
       final List<dynamic> decodedData = json.decode(conversationsJson);
       return decodedData
@@ -108,7 +234,9 @@ class ChatHistoryService {
     return prefs.getString(_activeConversationKey);
   }
 
-  static Future<void> saveConversations(List<ChatConversation> conversations) async {
+  static Future<void> saveConversations(
+    List<ChatConversation> conversations,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final conversationsJson = json.encode(
       conversations.map((conv) => conv.toJson()).toList(),
@@ -122,14 +250,17 @@ class ChatHistoryService {
   }
 
   // NEW: User-specific methods
-  static Future<List<ChatConversation>> loadUserConversations(String userId) async {
+
+  static Future<List<ChatConversation>> loadUserConversations(
+    String userId,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final conversationsJson = prefs.getString(_getUserConversationsKey(userId));
-    
+
     if (conversationsJson == null) {
       return [];
     }
-    
+
     try {
       final List<dynamic> decodedData = json.decode(conversationsJson);
       return decodedData
@@ -147,41 +278,29 @@ class ChatHistoryService {
     return prefs.getString(_getUserActiveConversationKey(userId));
   }
 
-  static Future<void> saveUserConversations(String userId, List<ChatConversation> conversations) async {
+  static Future<void> saveUserConversations(
+    String userId,
+    List<ChatConversation> conversations,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     // Filter conversations to only include those belonging to this user
-    final userConversations = conversations.where((conv) => conv.userId == userId).toList();
+    final userConversations =
+        conversations.where((conv) => conv.userId == userId).toList();
     final conversationsJson = json.encode(
       userConversations.map((conv) => conv.toJson()).toList(),
     );
     await prefs.setString(_getUserConversationsKey(userId), conversationsJson);
   }
 
-  static Future<void> saveUserActiveConversationId(String userId, String conversationId) async {
+  static Future<void> saveUserActiveConversationId(
+    String userId,
+    String conversationId,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_getUserActiveConversationKey(userId), conversationId);
-  }
-
-  static Future<ChatConversation> createNewUserConversation(String userId) async {
-    final newConversation = ChatConversation(
-      id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
-      title: 'New Chat',
-      messages: [],
-      userId: userId,
-      isActive: true,
+    await prefs.setString(
+      _getUserActiveConversationKey(userId),
+      conversationId,
     );
-    return newConversation;
-  }
-
-  static Future<ChatConversation> createNewConversation() async {
-    final newConversation = ChatConversation(
-      id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
-      title: 'New Chat',
-      messages: [],
-      userId: 'legacy', // For backward compatibility
-      isActive: true,
-    );
-    return newConversation;
   }
 
   static Future<void> saveUserMessageToConversation(
@@ -190,7 +309,9 @@ class ChatHistoryService {
     ChatMessage message,
     List<ChatConversation> conversations,
   ) async {
-    final conversationIndex = conversations.indexWhere((conv) => conv.id == conversationId);
+    final conversationIndex = conversations.indexWhere(
+      (conv) => conv.id == conversationId,
+    );
     if (conversationIndex != -1) {
       conversations[conversationIndex].messages.add(message);
       await saveUserConversations(userId, conversations);
@@ -202,7 +323,9 @@ class ChatHistoryService {
     ChatMessage message,
     List<ChatConversation> conversations,
   ) async {
-    final conversationIndex = conversations.indexWhere((conv) => conv.id == conversationId);
+    final conversationIndex = conversations.indexWhere(
+      (conv) => conv.id == conversationId,
+    );
     if (conversationIndex != -1) {
       conversations[conversationIndex].messages.add(message);
       await saveConversations(conversations);
@@ -214,7 +337,9 @@ class ChatHistoryService {
     String conversationId,
     List<ChatConversation> conversations,
   ) async {
-    conversations.removeWhere((conv) => conv.id == conversationId && conv.userId == userId);
+    conversations.removeWhere(
+      (conv) => conv.id == conversationId && conv.userId == userId,
+    );
     await saveUserConversations(userId, conversations);
   }
 
@@ -226,7 +351,7 @@ class ChatHistoryService {
     await saveConversations(conversations);
   }
 
-  static Future<void> updateUserConversationTitle(
+  static Future<void> updateUserConversationTitlee(
     String userId,
     String conversationId,
     String newTitle,
@@ -246,7 +371,9 @@ class ChatHistoryService {
     String newTitle,
     List<ChatConversation> conversations,
   ) async {
-    final conversationIndex = conversations.indexWhere((conv) => conv.id == conversationId);
+    final conversationIndex = conversations.indexWhere(
+      (conv) => conv.id == conversationId,
+    );
     if (conversationIndex != -1) {
       conversations[conversationIndex].title = newTitle;
       await saveConversations(conversations);
@@ -260,7 +387,9 @@ class ChatHistoryService {
     final lowerQuery = query.toLowerCase();
     return conversations.where((conv) {
       return conv.title.toLowerCase().contains(lowerQuery) ||
-          conv.messages.any((msg) => msg.message.toLowerCase().contains(lowerQuery));
+          conv.messages.any(
+            (msg) => msg.message.toLowerCase().contains(lowerQuery),
+          );
     }).toList();
   }
 
@@ -268,13 +397,13 @@ class ChatHistoryService {
     if (firstMessage.length <= 30) {
       return firstMessage;
     }
-    
+
     // Find the first sentence or take first 30 characters
     final sentences = firstMessage.split(RegExp(r'[.!?]+'));
     if (sentences.isNotEmpty && sentences.first.length <= 30) {
       return sentences.first.trim();
     }
-    
+
     return '${firstMessage.substring(0, 27)}...';
   }
 
@@ -289,12 +418,16 @@ class ChatHistoryService {
   static Future<void> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getKeys();
-    final chatKeys = keys.where((key) => 
-      key.startsWith('user_') || 
-      key == _conversationsKey || 
-      key == _activeConversationKey
-    ).toList();
-    
+    final chatKeys =
+        keys
+            .where(
+              (key) =>
+                  key.startsWith('user_') ||
+                  key == _conversationsKey ||
+                  key == _activeConversationKey,
+            )
+            .toList();
+
     for (String key in chatKeys) {
       await prefs.remove(key);
     }
@@ -306,32 +439,35 @@ class ChatHistoryService {
       // Load legacy conversations
       final legacyConversations = await loadConversations();
       final legacyActiveId = await loadActiveConversationId();
-      
+
       if (legacyConversations.isNotEmpty) {
         // Update conversations with user ID
-        final userConversations = legacyConversations.map((conv) {
-          return ChatConversation(
-            id: conv.id,
-            title: conv.title,
-            messages: conv.messages,
-            userId: userId,
-            isActive: conv.isActive,
-            createdAt: conv.createdAt,
-          );
-        }).toList();
-        
+        final userConversations =
+            legacyConversations.map((conv) {
+              return ChatConversation(
+                id: conv.id,
+                title: conv.title,
+                messages: conv.messages,
+                userId: userId,
+                isActive: conv.isActive,
+                createdAt: conv.createdAt,
+              );
+            }).toList();
+
         // Save as user-specific conversations
         await saveUserConversations(userId, userConversations);
         if (legacyActiveId != null) {
           await saveUserActiveConversationId(userId, legacyActiveId);
         }
-        
+
         // Clear legacy data
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_conversationsKey);
         await prefs.remove(_activeConversationKey);
-        
-        print('Migrated ${userConversations.length} conversations to user-specific storage');
+
+        print(
+          'Migrated ${userConversations.length} conversations to user-specific storage',
+        );
       }
     } catch (e) {
       print('Error migrating legacy conversations: $e');
