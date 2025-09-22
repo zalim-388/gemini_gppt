@@ -1,16 +1,13 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChatMessage {
   final String id;
   final String type;
   final String message;
-  final conversationId;
+  final String conversationId;
   final DateTime timestamp;
 
   ChatMessage({
@@ -26,18 +23,18 @@ class ChatMessage {
       'id': id,
       'type': type,
       'message': message,
-      "conversation_Id": conversationId,
-      'timestamp': timestamp.toIso8601String(),
+      "conversation_id": conversationId,
+      'timestamp': timestamp.microsecondsSinceEpoch,
     };
   }
 
-  factory ChatMessage.fromMap(Map<String, dynamic> Map) {
+  factory ChatMessage.fromMap(Map<String, dynamic> map) {
     return ChatMessage(
-      id: Map['id'],
-      type: Map['type'],
-      message: Map['message'],
-      conversationId: Map['conversation_Id'],
-      timestamp: DateTime.parse(Map['timestamp']),
+      id: map['id'],
+      type: map['type'],
+      message: map['message'],
+      conversationId: map['conversation_Id'],
+      timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp']),
     );
   }
 }
@@ -46,26 +43,26 @@ class ChatConversation {
   final String id;
   String title;
   bool isActive;
-  final List<ChatMessage> messages;
   final DateTime createdAt;
   final String userId;
+  List<ChatMessage> messages;
 
   ChatConversation({
     required this.id,
     required this.title,
-    required this.messages,
     required this.userId,
     this.isActive = false,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+    List<ChatMessage>? messages,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       messages = messages ?? [];
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
-      'isActive': isActive,
-      'messages': messages.map((msg) => msg.toMap()).toList(),
-      'createdAt': createdAt.toIso8601String(),
+      'isActive': isActive ? 1 : 0,
+      'createdAt': createdAt.microsecondsSinceEpoch,
       'userId': userId,
     };
   }
@@ -75,19 +72,16 @@ class ChatConversation {
       id: json['id'],
       title: json['title'],
       userId: json['userId'],
-      messages:
-          (json['messages'] as List<dynamic>)
-              .map((msgJson) => ChatMessage.fromMap(msgJson))
-              .toList(),
       isActive: json['isActive'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
+      messages: [],
     );
   }
 }
 
-class ChatDBHelper {
-  ChatDBHelper._();
-  static final ChatDBHelper instance = ChatDBHelper._();
+class ChatHistoryDBHelper {
+  ChatHistoryDBHelper._();
+  static final ChatHistoryDBHelper instance = ChatHistoryDBHelper._();
   //DATA BASE TABLE
   static const String TABLE_CONVARSTION = "Converstion";
   static const String TABLE_MESSAGES = "messages";
@@ -111,13 +105,13 @@ class ChatDBHelper {
     if (mychatDB != null) {
       return mychatDB!;
     } else {
-      mychatDB = await openchatDB();
+      mychatDB = await initDB();
       return mychatDB!;
     }
   }
 
   //initialize database
-  Future<Database> openchatDB() async {
+  Future<Database> initDB() async {
     Directory appDir = await getApplicationDocumentsDirectory();
     String dbpath = join(appDir.path, "chatDB.db");
     return await openDatabase(
@@ -125,15 +119,15 @@ class ChatDBHelper {
       version: 1,
 
       onCreate: (db, version) async {
-        await db.execute(
-          "CREATE TABLE$TABLE_CONVARSTION("
-          "$CONV_ID TEXT PRIMARY KEY,"
-          "$CONV_TITLE TEXT,"
-          "$CONV_MESSAGES TEXT,"
-          "$CONV_USER_ID TEXT,"
-          "$CONV_IS_ACTIVE INTEGER,"
-          "$CONV_CREATED_AT TEXT)",
-        );
+        await db.execute('''
+          CREATE TABLE$TABLE_CONVARSTION(
+          $CONV_ID TEXT PRIMARY KEY,
+          $CONV_TITLE TEXT,
+          $CONV_MESSAGES TEXT,
+        $CONV_USER_ID TEXT,
+          $CONV_IS_ACTIVE INTEGER,
+          $CONV_CREATED_AT TEXT),
+          ''');
 
         await db.execute('''
           CREATE TABLE $TABLE_MESSAGES (
@@ -152,29 +146,19 @@ class ChatDBHelper {
   }
 
 
-  //   Future<bool> updateUserConversationTitle({
-  //     required int userId,
-  //     required String newTitle,
-  //     required List<ChatConversation> conversations,
-  //   }) async {
-  // var db =await getchatDB();
-  // int rowsEffected= await db.update(TABLE_CHAT_HISTORY, {
-  //   COLUMN_MESSAGE: newTitle})
-
-  //   }
 
   //conv......
   // Create new conversation
   Future<ChatConversation> createConversation({
     String? title,
-    required String userid,
+    required String userId,
   }) async {
     final db = await getDB();
     final newConversation = ChatConversation(
       id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
       title: 'New Chat',
-      messages: [],
-      userId: userid,
+
+      userId: userId,
       isActive: false,
     );
     await db.insert(TABLE_CONVARSTION, newConversation.toMap());
@@ -209,7 +193,7 @@ class ChatDBHelper {
     return null;
   }
 
-  Future<bool> setsaveConversations({
+  Future<bool> setActiveConversations({
     required String userid,
     required String ConverstionId,
   }) async {
@@ -234,15 +218,16 @@ class ChatDBHelper {
 
   // upadte title
   Future<bool> updateConversationTitle(
-    String conversationId,
-    String newTitle,
+   { required
+    String conversationid,
+   required String newtitle,}
   ) async {
     final db = await getDB();
     int rowsEffected = await db.update(
       TABLE_CONVARSTION,
-      {CONV_TITLE: newTitle},
+      {CONV_TITLE: newtitle},
       where: '$CONV_ID=?',
-      whereArgs: [conversationId],
+      whereArgs: [conversationid],
     );
     return rowsEffected > 0;
   }
@@ -291,136 +276,90 @@ class ChatDBHelper {
     }
   }
 
-    Future<List<ChatMessage>> getAllMessagetype(String type) async {
-      try {
-        final db = await getDB();
-        List<Map<String, dynamic>> result = await db.query(
-          TABLE_MESSAGES,
-          where: '$MSG_MESSAGE = ?',
-          whereArgs: [type],
-        );
+  Future<List<ChatMessage>> getMessagetype({
+    required String conversationId,
+    required String type,
+  }) async {
+    try {
+      final db = await getDB();
+      List<Map<String, dynamic>> result = await db.query(
+        TABLE_MESSAGES,
+        where: '$MSG_CONVERSATION_ID = ? $MSG_TYPE=?',
+        whereArgs: [conversationId, type],
+      );
 
-        return result.map((map) => ChatMessage.fromJson(map)).toList();
-      } catch (e) {
-        print('Error getting messages type from database: $e');
-        return [];
-      }
+      return result.map((map) => ChatMessage.fromMap(map)).toList();
+    } catch (e) {
+      print('Error getting messages type from database: $e');
+      return [];
     }
+  }
 
+  //   Future<bool> updateUserConversationTitle({
+  //     required int userId,
+  //     required String newTitle,
+  //     required List<ChatConversation> conversations,
+  //   }) async {
+  // var db =await getchatDB();
+  // int rowsEffected= await db.update(TABLE_CHAT_HISTORY, {
+  //   COLUMN_MESSAGE: newTitle})
 
-  Future<void> saveUserConversations(
-    String userId,
-    List<ChatConversation> conversations,
-  ) async {
+  //   }
+  //update message
+  Future<bool> updatemessage({
+    required String messageId,
+    required String newMessage,
+  }) async {
     final db = await getDB();
-
-    final userConversations =
-        conversations.where((conv) => conv.userId == userId).toList();
-    final conversationsJson = json.encode(
-      userConversations.map((conv) => conv.toJson()).toList(),
+    int rowEffcted = await db.update(TABLE_MESSAGES, {
+      MSG_MESSAGE: newMessage,
+    },
+    
+     where: '$MSG_ID=?',
+    whereArgs: [messageId]
+    
     );
-    await prefs.setString(_getUserConversationsKey(userId), conversationsJson);
+    return rowEffcted > 0;
   }
 
-  static Future<void> saveUserActiveConversationId(
-    String userId,
-    String conversationId,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _getUserActiveConversationKey(userId),
-      conversationId,
+  // delete mesg
+  Future<bool> deleteUserConversation(String MessageId) async {
+    final db = await getDB();
+    int rowEffected = await db.delete(
+      TABLE_MESSAGES,
+
+      where: '$MSG_ID=?',
+      whereArgs: [MessageId],
     );
+    return rowEffected > 0;
   }
 
-  static Future<void> saveUserMessageToConversation(
-    String userId,
-    String conversationId,
-    ChatMessage message,
-    List<ChatConversation> conversations,
-  ) async {
-    final conversationIndex = conversations.indexWhere(
-      (conv) => conv.id == conversationId,
+  Future<List<ChatConversation>> searchConversations(  {
+    required String query,
+    required String userId,
+  }) async {
+    final db = await getDB();
+  final searchQuery = '%$query%';
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+      '''
+ SELECT DISTINCT c.*
+ FROM$TABLE_CONVARSTION c
+ LEFT JION $TABLE_MESSAGES m ON C.$CONV_ID= m.$MSG_CONVERSATION_ID
+ WHERE c$CONV_USER_ID =?
+ AND(c $CONV_TITLE LIKE ? OR m.$MSG_MESSAGE?
+)
+
+''',
+      [userId, searchQuery, searchQuery],
     );
-    if (conversationIndex != -1) {
-      conversations[conversationIndex].messages.add(message);
-      await saveUserConversations(userId, conversations);
-    }
+    return maps.map((m) => ChatConversation.fromMap(m)).toList();
   }
 
-  static Future<void> saveMessageToConversation(
-    String conversationId,
-    ChatMessage message,
-    List<ChatConversation> conversations,
-  ) async {
-    final conversationIndex = conversations.indexWhere(
-      (conv) => conv.id == conversationId,
-    );
-    if (conversationIndex != -1) {
-      conversations[conversationIndex].messages.add(message);
-      await saveConversations(conversations);
-    }
-  }
-
-  static Future<void> deleteUserConversation(
-    String userId,
-    String conversationId,
-    List<ChatConversation> conversations,
-  ) async {
-    conversations.removeWhere(
-      (conv) => conv.id == conversationId && conv.userId == userId,
-    );
-    await saveUserConversations(userId, conversations);
-  }
-
-  static Future<void> updateUserConversationTitlee(
-    String userId,
-    String conversationId,
-    String newTitle,
-    List<ChatConversation> conversations,
-  ) async {
-    final conversationIndex = conversations.indexWhere(
-      (conv) => conv.id == conversationId && conv.userId == userId,
-    );
-    if (conversationIndex != -1) {
-      conversations[conversationIndex].title = newTitle;
-      await saveUserConversations(userId, conversations);
-    }
-  }
-
-  static Future<void> updateConversationTitle(
-    String conversationId,
-    String newTitle,
-    List<ChatConversation> conversations,
-  ) async {
-    final conversationIndex = conversations.indexWhere(
-      (conv) => conv.id == conversationId,
-    );
-    if (conversationIndex != -1) {
-      conversations[conversationIndex].title = newTitle;
-      await saveConversations(conversations);
-    }
-  }
-
-  static List<ChatConversation> searchConversations(
-    List<ChatConversation> conversations,
-    String query,
-  ) {
-    final lowerQuery = query.toLowerCase();
-    return conversations.where((conv) {
-      return conv.title.toLowerCase().contains(lowerQuery) ||
-          conv.messages.any(
-            (msg) => msg.message.toLowerCase().contains(lowerQuery),
-          );
-    }).toList();
-  }
-
-  static String generateConversationTitle(String firstMessage) {
+  String generateConversationTitle(String firstMessage) {
     if (firstMessage.length <= 30) {
       return firstMessage;
     }
 
-    // Find the first sentence or take first 30 characters
     final sentences = firstMessage.split(RegExp(r'[.!?]+'));
     if (sentences.isNotEmpty && sentences.first.length <= 30) {
       return sentences.first.trim();
@@ -429,70 +368,185 @@ class ChatDBHelper {
     return '${firstMessage.substring(0, 27)}...';
   }
 
-  // Clear all user data (useful for logout)
-  static Future<void> clearUserData(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_getUserConversationsKey(userId));
-    await prefs.remove(_getUserActiveConversationKey(userId));
+  Future<ChatConversation> CreateConverstionwithMessage({
+    required String userId,
+    required ChatMessage firstMessage,
+    String? title,
+  }) async {
+    final db = await getDB();
+    return await db.transaction((txn) async {
+      final conversation = ChatConversation(
+        id: firstMessage.conversationId,
+        title: title ?? generateConversationTitle(firstMessage.message),
+        userId: userId,
+        isActive: true,
+      );
+      await txn.insert(TABLE_CONVARSTION, conversation.toMap());
+      await txn.insert(TABLE_MESSAGES, firstMessage.toMap());
+
+      return conversation;
+    });
   }
 
-  // Clear all data (useful for app reset)
-  static Future<void> clearAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys();
-    final chatKeys =
-        keys
-            .where(
-              (key) =>
-                  key.startsWith('user_') ||
-                  key == _conversationsKey ||
-                  key == _activeConversationKey,
-            )
-            .toList();
+  Future<Map<String, dynamic>?> getConverstionMessage(
+    String ConverstionId,
+  ) async {
+    final db = await getDB();
+    final convMap = await db.query(
+      TABLE_CONVARSTION,
+      where: '$CONV_ID =?',
+      whereArgs: [ConverstionId],
+      limit: 1,
+    );
+    if (convMap.isEmpty) return null;
+    final conversation = ChatConversation.fromMap(convMap.first);
+    final messages = await getConverstionMessage(ConverstionId);
 
-    for (String key in chatKeys) {
-      await prefs.remove(key);
-    }
+    return {'conversation': conversation, 'messages': messages};
   }
 
-  // Migration method to convert legacy conversations to user-specific ones
-  static Future<void> migrateLegacyConversations(String userId) async {
-    try {
-      // Load legacy conversations
-      final legacyConversations = await loadConversations();
-      final legacyActiveId = await loadActiveConversationId();
+  Future<void> clearUserData(String userId) async {
+    final db = await getDB();
 
-      if (legacyConversations.isNotEmpty) {
-        // Update conversations with user ID
-        final userConversations =
-            legacyConversations.map((conv) {
-              return ChatConversation(
-                id: conv.id,
-                title: conv.title,
-                messages: conv.messages,
-                userId: userId,
-                isActive: conv.isActive,
-                createdAt: conv.createdAt,
-              );
-            }).toList();
+    await db.transaction((txn) async {
+      // Get user conversations
+      final conversations = await getUserConversation(userId);
 
-        // Save as user-specific conversations
-        await saveUserConversations(userId, userConversations);
-        if (legacyActiveId != null) {
-          await saveUserActiveConversationId(userId, legacyActiveId);
-        }
-
-        // Clear legacy data
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(_conversationsKey);
-        await prefs.remove(_activeConversationKey);
-
-        print(
-          'Migrated ${userConversations.length} conversations to user-specific storage',
+      // Delete all messages for user conversations
+      for (final conv in conversations) {
+        await txn.delete(
+          TABLE_MESSAGES,
+          where: '$MSG_CONVERSATION_ID = ?',
+          whereArgs: [conv.id],
         );
       }
-    } catch (e) {
-      print('Error migrating legacy conversations: $e');
-    }
+
+      // Delete user conversations
+      await txn.delete(
+        TABLE_CONVARSTION,
+        where: '$CONV_USER_ID = ?',
+        whereArgs: [userId],
+      );
+    });
+  }
+
+  // Clear all data
+  Future<void> clearAllData() async {
+    final db = await getDB();
+
+    await db.transaction((txn) async {
+      await txn.delete(TABLE_MESSAGES);
+      await txn.delete(TABLE_CONVARSTION);
+    });
   }
 }
+
+//   Future<void> saveUserConversations(
+//     String userId,
+//     List<ChatConversation> conversations,
+//   ) async {
+//     final db = await getDB();
+
+//     final userConversations =
+//         conversations.where((conv) => conv.userId == userId).toList();
+//     final conversationsJson = json.encode(
+//       userConversations.map((conv) => conv.toJson()).toList(),
+//     );
+//     await prefs.setString(_getUserConversationsKey(userId), conversationsJson);
+//   }
+
+//   static Future<void> saveUserActiveConversationId(
+//     String userId,
+//     String conversationId,
+//   ) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.setString(
+//       _getUserActiveConversationKey(userId),
+//       conversationId,
+//     );
+//   }
+
+//   static Future<void> saveUserMessageToConversation(
+//     String userId,
+//     String conversationId,
+//     ChatMessage message,
+//     List<ChatConversation> conversations,
+//   ) async {
+//     final conversationIndex = conversations.indexWhere(
+//       (conv) => conv.id == conversationId,
+//     );
+//     if (conversationIndex != -1) {
+//       conversations[conversationIndex].messages.add(message);
+//       await saveUserConversations(userId, conversations);
+//     }
+//   }
+
+//   static Future<void> saveMessageToConversation(
+//     String conversationId,
+//     ChatMessage message,
+//     List<ChatConversation> conversations,
+//   ) async {
+//     final conversationIndex = conversations.indexWhere(
+//       (conv) => conv.id == conversationId,
+//     );
+//     if (conversationIndex != -1) {
+//       conversations[conversationIndex].messages.add(message);
+//       await saveConversations(conversations);
+//     }
+//   }
+
+//   static Future<void> updateConversationTitle(
+//     String conversationId,
+//     String newTitle,
+//     List<ChatConversation> conversations,
+//   ) async {
+//     final conversationIndex = conversations.indexWhere(
+//       (conv) => conv.id == conversationId,
+//     );
+//     if (conversationIndex != -1) {
+//       conversations[conversationIndex].title = newTitle;
+//       await saveConversations(conversations);
+//     }
+//   }
+
+//   // Migration method to convert legacy conversations to user-specific ones
+//   static Future<void> migrateLegacyConversations(String userId) async {
+//     try {
+//       // Load legacy conversations
+//       final legacyConversations = await loadConversations();
+//       final legacyActiveId = await loadActiveConversationId();
+
+//       if (legacyConversations.isNotEmpty) {
+//         // Update conversations with user ID
+//         final userConversations =
+//             legacyConversations.map((conv) {
+//               return ChatConversation(
+//                 id: conv.id,
+//                 title: conv.title,
+//                 messages: conv.messages,
+//                 userId: userId,
+//                 isActive: conv.isActive,
+//                 createdAt: conv.createdAt,
+//               );
+//             }).toList();
+
+//         // Save as user-specific conversations
+//         await saveUserConversations(userId, userConversations);
+//         if (legacyActiveId != null) {
+//           await saveUserActiveConversationId(userId, legacyActiveId);
+//         }
+
+//         // Clear legacy data
+//         final prefs = await SharedPreferences.getInstance();
+//         await prefs.remove(_conversationsKey);
+//         await prefs.remove(_activeConversationKey);
+
+//         print(
+//           'Migrated ${userConversations.length} conversations to user-specific storage',
+//         );
+//       }
+//     } catch (e) {
+//       print('Error migrating legacy conversations: $e');
+//     }
+//   }
+// }

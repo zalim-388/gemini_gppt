@@ -35,6 +35,7 @@ class _CustomDrawerState extends State<CustomDrawer>
     with TickerProviderStateMixin {
   late AnimationController _drawerAnimationController;
   final TextEditingController _searchController = TextEditingController();
+  final ChatHistoryDBHelper _chatDB=ChatHistoryDBHelper.instance;
 
   List<ChatConversation> _filteredConversations = [];
   String _searchQuery = '';
@@ -66,13 +67,14 @@ class _CustomDrawerState extends State<CustomDrawer>
   }
 
   void _filterConversations() {
-    setState(() {
+    final userId=FirebaseAuth.instance.currentUser!.uid;
+    setState(() async {
       if (_searchQuery.isEmpty) {
         _filteredConversations = widget.conversation;
       } else {
-        _filteredConversations = ChatHistoryService.searchConversations(
-          widget.conversation,
-          _searchQuery,
+        _filteredConversations =  await _chatDB.searchConversations(query:  _searchQuery, 
+        userId:userId,
+       
         );
       }
     });

@@ -10,6 +10,7 @@ import 'package:gemini_gpt/bloc/GeminiGptEvent.dart';
 import 'package:gemini_gpt/bloc/GeminiGptState.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -22,6 +23,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ChatHistoryDBHelper _chatDB = ChatHistoryDBHelper.instance;
+
   List<ChatConversation> _conversations = [];
   String? _activeConversationId;
   ChatConversation? _activeConversation;
@@ -73,21 +76,19 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final conversations = await ChatHistoryService.loadUserConversations(
+      final conversations = await _chatDB.getUserConversation(
         _currentUser!.uid,
       );
-      final activeId = await ChatHistoryService.loadUserActiveConversationId(
+      final activeConversation = await _chatDB.getActiveConversations(
         _currentUser!.uid,
       );
 
       setState(() {
         _conversations = conversations;
-        if (conversations.isNotEmpty) {
-          _activeConversationId = activeId ?? conversations.first.id;
-          _activeConversation = conversations.firstWhere(
-            (conv) => conv.id == _activeConversationId,
-            orElse: () => conversations.first,
-          );
+        _activeConversation = activeConversation;
+        _activeConversationId = _activeConversationId;
+        if (_activeConversation == null) {
+          _loadmeasageActive();
         } else {
           _activeConversationId = null;
           _activeConversation = ChatConversation(
@@ -106,13 +107,33 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+  //Load messages for the active conversation
 
-  Future<void> createNewConversation() async {
+  Future<void> _loadmeasageActive() async {
+    if (_activeConversation == null) return;
+    try {
+      final message = await _chatDB.getAllMessage(_activeConversation!.id);
+
+      setState(() {
+        _activeConversation!.messages = message;
+      });
+    } catch (e) {
+      print("Error loading messages: $e");
+    }
+  }
+
+  Future<void> CreateNewConversation() async {
     if (_currentUser == null) return;
 
-    final newConversation = await ChatHistoryService.createNewUserConversation(
-      _currentUser!.uid,
+    final newConversation = await _chatDB.createConversation(
+      userId: _currentUser!.uid,
+      title: 'New title',
     );
+    await _chatDB.setActiveConversations(
+      ConverstionId: newConversation.id,
+      userid: _currentUser!.uid,
+    );
+
     setState(() {
       for (var conv in _conversations) {
         conv.isActive = false;
@@ -120,54 +141,51 @@ class _HomePageState extends State<HomePage> {
       _conversations.insert(0, newConversation);
       _activeConversationId = newConversation.id;
       _activeConversation = newConversation;
+      _activeConversation!.messages = [];
     });
-    await ChatHistoryService.saveUserConversations(
-      _currentUser!.uid,
-      _conversations,
-    );
-    await ChatHistoryService.saveUserActiveConversationId(
-      _currentUser!.uid,
-      newConversation.id,
-    );
   }
 
   Future<void> switchConversation(String conversationId) async {
     if (_currentUser == null) return;
 
-    setState(() {
-      for (var conv in _conversations) {
-        conv.isActive = conv.id == conversationId;
-      }
-      _activeConversationId = conversationId;
-      _activeConversation = _conversations.firstWhere(
+    try {
+      await _chatDB.setActiveConversations(
+        userid: _currentUser!.uid,
+        ConverstionId: conversationId,
+      );
+      //update ui
+      final SelectConv = _conversations.firstWhere(
         (conv) => conv.id == conversationId,
       );
-    });
-    await ChatHistoryService.saveUserActiveConversationId(
-      _currentUser!.uid,
-      conversationId,
-    );
-    await ChatHistoryService.saveUserConversations(
-      _currentUser!.uid,
-      _conversations,
-    );
+      final message = await _chatDB.getAllMessage(conversationId);
+      SelectConv.messages = message;
+      setState(() {
+        _activeConversationId = _activeConversationId;
+        _activeConversation = SelectConv;
+      });
+    } catch (e) {
+      print("Error switching converstion :$e");
+    }
   }
 
   Future<void> deleteConversation(String conversationId) async {
     if (_currentUser == null) return;
 
-    await ChatHistoryService.deleteUserConversation(
-      _currentUser!.uid,
-      conversationId,
-      _conversations,
-    );
+    try {
+      await _chatDB.deleteConversation(conversationId);
 
-    if (_activeConversationId == conversationId) {
-      if (_conversations.isNotEmpty) {
-        await switchConversation(_conversations.first.id);
-      } else {
-        await createNewConversation();
+      _conversations.removeWhere((conv) => conv.id == conversationId);
+
+      if (_activeConversationId == conversationId) {
+        if (_conversations.isNotEmpty) {
+          await switchConversation(_conversations.first.id);
+        } else {
+          await CreateNewConversation();
+        }
       }
+      setState(() {});
+    } catch (e) {
+      print("Error delete conv: $e");
     }
   }
 
@@ -177,22 +195,24 @@ class _HomePageState extends State<HomePage> {
   ) async {
     if (_currentUser == null) return;
 
-    await ChatHistoryService.updateUserConversationTitle(
-      _currentUser!.uid,
-      conversationId,
-      newTitle,
-      _conversations,
-    );
-
-    setState(() {
-      final conversation = _conversations.firstWhere(
-        (conv) => conv.id == conversationId,
+    try {
+      await _chatDB.updateConversationTitle(
+        conversationid: conversationId,
+        newtitle: newTitle,
       );
-      conversation.title = newTitle;
-    });
+
+      setState(() {
+        final conversation = _conversations.firstWhere(
+          (conv) => conv.id == conversationId,
+        );
+        conversation.title = newTitle;
+      });
+    } catch (e) {
+      print(" Error rename conv:$e");
+    }
   }
 
-  void _sendMessage() async {
+  void _sendMessage(BuildContext context) async {
     if (_currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -207,7 +227,7 @@ class _HomePageState extends State<HomePage> {
     if (inputMessage.isEmpty) return;
 
     if (_activeConversation == null) {
-      await createNewConversation();
+      await CreateNewConversation();
     }
 
     if (_activeConversation == null) return;
@@ -218,25 +238,33 @@ class _HomePageState extends State<HomePage> {
       id: 'Msg${DateTime.now().microsecondsSinceEpoch}_user',
       type: "user",
       message: inputMessage,
+      conversationId: _activeConversation!.id,
     );
+    try {
+      await _chatDB.addmessage(userMessage);
+      setState(() {
+        _activeConversation?.messages.add(userMessage);
+      });
 
-    setState(() {
-      _activeConversation?.messages.add(userMessage);
-    });
+      if (isFirstMessage) {
+        final newTitle = _chatDB.generateConversationTitle(inputMessage);
+        _activeConversation?.title = newTitle;
+        BlocProvider.of<GeminiGptBloc>(
+          context,
+        ).add(FetchGeminiGpt(prompt: userMessage.message));
 
-    if (isFirstMessage) {
-      final newTitle = ChatHistoryService.generateConversationTitle(
-        inputMessage,
+        _controller.clear();
+        _scrollToBottom();
+      }
+    } catch (e) {
+      print("Error sending message: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error sending message: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
-      _activeConversation?.title = newTitle;
     }
-
-    BlocProvider.of<GeminiGptBloc>(
-      context,
-    ).add(FetchGeminiGpt(prompt: userMessage.message));
-
-    _controller.clear();
-    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -326,7 +354,7 @@ class _HomePageState extends State<HomePage> {
         onConversationSelected: switchConversation,
         onConversationDeleted: deleteConversation,
         onConversationRenamed: renameConversation,
-        onNewConversation: createNewConversation,
+        onNewConversation: CreateNewConversation,
       ),
       body: Column(
         children: [
@@ -342,11 +370,21 @@ class _HomePageState extends State<HomePage> {
                         id: 'Msg${DateTime.now().microsecondsSinceEpoch}_bot',
                         type: 'bot',
                         message: state.gemini.url,
+                        conversationId: _activeConversation!.id,
                       );
-                      setState(() {
-                        _activeConversation?.messages.add(botMessage);
-                      });
-                      _scrollToBottom();
+                      try {
+                        // Add to database
+                        await _chatDB.addmessage(botMessage);
+
+                        // Update UI
+                        setState(() {
+                          _activeConversation!.messages.add(botMessage);
+                        });
+
+                        _scrollToBottom();
+                      } catch (e) {
+                        print("Error saving bot message: $e");
+                      }
                     } else if (state is GeminiGptBlocError) {
                       final lastMessage =
                           _activeConversation?.messages.isNotEmpty == true
@@ -359,12 +397,15 @@ class _HomePageState extends State<HomePage> {
                           id: 'Msg${DateTime.now().microsecondsSinceEpoch}_error',
                           type: "error",
                           message: 'Error: ${state.message}',
+                          conversationId: _activeConversation!.id,
                         );
-
-                        setState(() {
-                          _activeConversation?.messages.add(errorMessage);
-                        });
-                        _scrollToBottom();
+                        if (_activeConversation != null) {
+                          try {
+                            await _chatDB.addmessage(errorMessage);
+                          } catch (e) {
+                            print("Error saving error message: $e");
+                          }
+                        }
                       }
                     }
                   },
@@ -535,7 +576,7 @@ class _HomePageState extends State<HomePage> {
             controller: _controller,
             maxLines: null,
             textInputAction: TextInputAction.send,
-            onSubmitted: (_) => isLoading ? null : _sendMessage(),
+            onSubmitted: (_) => isLoading ? null : _sendMessage(context),
             style: GoogleFonts.poppins(
               color: isDarkMode ? Colors.white : Colors.black,
               fontSize: 16.sp,
@@ -602,7 +643,9 @@ class _HomePageState extends State<HomePage> {
                               size: 20.sp,
                             ),
                     onPressed:
-                        isLoading || _currentUser == null ? null : _sendMessage,
+                        isLoading || _currentUser == null
+                            ? null
+                            : () => _sendMessage(context),
                   ),
                 ),
               ),
