@@ -142,6 +142,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
   Future<void> signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {

@@ -167,6 +167,7 @@ class _CustomDrawerState extends State<CustomDrawer>
     widget.onConversationRenamed(chatId, newTitle);
   }
 
+
   void _showRenameDialog(ChatConversation chat) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;

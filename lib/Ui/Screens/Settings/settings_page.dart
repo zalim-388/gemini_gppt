@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:gemini_gpt/Ui/Authentication/Login_screen.dart';
+import 'package:gemini_gpt/Ui/Auth_/Login_screen.dart';
 import 'package:gemini_gpt/Ui/Screens/Settings/About_page.dart';
 import 'package:gemini_gpt/Ui/Screens/Settings/Upgrade_to_Pro.dart';
 import 'package:gemini_gpt/widgets/theme_mode.dart';
