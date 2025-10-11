@@ -3,7 +3,7 @@
 A modern Flutter application that integrates with Google's Gemini AI for intelligent conversations with persistent data storage.
 
 ## 📦 Download APK  
-👉 [Download Listify App](https://drive.google.com/file/d/1Yzys0VjAkCxnLRzfTwuZ0H9eBnWroXe8/view?usp=sharing)
+👉 [Download Gemini GPT App](https://drive.google.com/file/d/1Yzys0VjAkCxnLRzfTwuZ0H9eBnWroXe8/viewusp=sharing)
 
 ## ✨ Features
 
